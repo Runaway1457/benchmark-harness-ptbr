@@ -30,6 +30,7 @@ from ptbr_benchmark.providers.http import AnthropicProvider, OpenAIProvider
 from ptbr_benchmark.providers.pricing import load_pricing
 from ptbr_benchmark.report.aggregate import write_run
 from ptbr_benchmark.report.build import build_context, write_reports
+from ptbr_benchmark.report.gates import is_real_provider
 from ptbr_benchmark.runner.cache import CompletionCache
 from ptbr_benchmark.runner.executor import Executor
 from ptbr_benchmark.scoring.judge import LlmJudge, load_human_labels, validate_judge
@@ -154,6 +155,24 @@ def cmd_run(args: argparse.Namespace, settings: Settings) -> int:
             cache=cache,
             max_concurrency=settings.max_concurrency,
         )
+        if is_real_provider(provider.name) and not args.skip_preflight:
+            first_task = tasks[0]
+            first_item = first_task.load_items(Split(args.split))[0]
+            request = first_task.build_request(
+                first_item,
+                prompts_by_task[first_task.name],
+                model=spec.model,
+                seed=spec.seed * 1000,
+            )
+            completion = executor.preflight(request)
+            log.info(
+                "provider.preflight.ok",
+                provider=provider.name,
+                model=completion.model,
+                latency_ms=round(completion.latency_ms, 1),
+            )
+            if isinstance(provider, CascadeProvider):
+                provider.reset_counters()
         result = executor.run(spec, tasks, prompts_by_task)
     finally:
         if cache is not None:
@@ -290,6 +309,11 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--split", default="public", choices=("public", "holdout"))
     run.add_argument("--limit", type=int, default=None, help="amostra N itens por tarefa")
     run.add_argument("--no-cache", action="store_true")
+    run.add_argument(
+        "--skip-preflight",
+        action="store_true",
+        help="pula a chamada de fumaça; não recomendado para rodadas pagas",
+    )
     run.add_argument(
         "--cascade-to",
         default=None,

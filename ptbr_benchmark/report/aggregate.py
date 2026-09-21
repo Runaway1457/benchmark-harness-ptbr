@@ -40,6 +40,8 @@ from ptbr_benchmark.domain.models import (
     Usage,
 )
 
+MAX_PUBLISHABLE_ERROR_RATE = 0.02
+
 
 def write_run(result: RunResult, results_dir: Path) -> Path:
     run_dir = results_dir / result.spec.run_id
@@ -257,6 +259,15 @@ def summarize(observations: Iterable[Observation], *, seed: int) -> tuple[Config
             else bootstrap_mean(list(per_family_mean.values()), seed=seed)
         )
         latencies = [o.completion.latency_ms for o in group if o.completion.error is None]
+        extra = _task_specific(key.task, group)
+        if key.provider.startswith("cascade["):
+            escalations = sum(1 for item in group if item.completion.model == item.model)
+            extra = {
+                **extra,
+                "cascade_escalations": escalations,
+                "cascade_total": len(group),
+                "cascade_escalation_rate": round(escalations / len(group), 4),
+            }
         summaries.append(
             ConfigSummary(
                 key=key,
@@ -272,7 +283,7 @@ def summarize(observations: Iterable[Observation], *, seed: int) -> tuple[Config
                 observations=len(group),
                 error_rate=sum(1 for o in group if o.completion.error) / len(group),
                 cache_hit_rate=sum(1 for o in group if o.completion.cached) / len(group),
-                extra=_task_specific(key.task, group),
+                extra=extra,
             )
         )
     return tuple(summaries)
@@ -327,12 +338,7 @@ def _bootstrap_macro_f1(group: list[Observation], *, seed: int, resamples: int =
     ordered = sorted(samples)
     lower = ordered[int(0.025 * resamples)]
     upper = ordered[min(int(0.975 * resamples), resamples - 1)]
-    return Interval(
-        point=point,
-        lower=min(lower, point),
-        upper=max(upper, point),
-        n=len(family_ids),
-    )
+    return Interval(point=point, lower=lower, upper=upper, n=len(family_ids))
 
 
 def _mean_per_item(group: Iterable[Observation]) -> dict[str, float]:
@@ -370,6 +376,9 @@ def _task_specific(task: str, group: list[Observation]) -> dict[str, Any]:
             ),
             "hallucinated_answer_rate": round(
                 sum(1 for d in details if d.get("hallucinated_answer")) / n, 4
+            ),
+            "response_contract_error_rate": round(
+                sum(1 for d in details if d.get("response_contract_error")) / n, 4
             ),
         }
     if task == "fiscal_extraction":
@@ -478,15 +487,27 @@ def paired_prompt_sensitivity(
             continue
         prompt_names = sorted(by_prompt)
         base_name = prompt_names[0]
-        base_means = _mean_per_family(by_prompt[base_name])
-        quality_a = bootstrap_mean(list(base_means.values()), seed=seed)
+        base_group = by_prompt[base_name]
+        base_means = _mean_per_family(base_group)
+        quality_a = _task_quality(task, base_group, seed=seed)
         for prompt_name in prompt_names[1:]:
-            other_means = _mean_per_family(by_prompt[prompt_name])
+            other_group = by_prompt[prompt_name]
+            other_means = _mean_per_family(other_group)
             common = sorted(set(base_means) & set(other_means))
             if not common:
                 continue
-            pairs = [(base_means[item], other_means[item]) for item in common]
-            quality_b = bootstrap_mean(list(other_means.values()), seed=seed)
+            quality_b = _task_quality(task, other_group, seed=seed)
+            has_classification_labels = all(
+                "expected" in observation.score.details and "actual" in observation.score.details
+                for observation in (*base_group, *other_group)
+            )
+            paired_delta = (
+                _paired_macro_f1_difference(base_group, other_group, seed=seed)
+                if task == "ticket_routing" and has_classification_labels
+                else bootstrap_paired_difference(
+                    [(base_means[item], other_means[item]) for item in common], seed=seed
+                )
+            )
             comparisons.append(
                 PromptSensitivity(
                     task=task,
@@ -495,25 +516,121 @@ def paired_prompt_sensitivity(
                     prompt_b=prompt_name,
                     quality_a=quality_a,
                     quality_b=quality_b,
-                    paired_delta=bootstrap_paired_difference(pairs, seed=seed),
+                    paired_delta=paired_delta,
                 )
             )
     return tuple(comparisons)
 
 
-def overall_pareto(summaries: Iterable[ConfigSummary]) -> tuple[ParetoPoint, ...]:
+def _task_quality(task: str, group: list[Observation], *, seed: int) -> Interval:
+    has_labels = all(
+        "expected" in observation.score.details and "actual" in observation.score.details
+        for observation in group
+    )
+    if task == "ticket_routing" and has_labels:
+        return _bootstrap_macro_f1(group, seed=seed)
+    return bootstrap_mean(list(_mean_per_family(group).values()), seed=seed)
+
+
+def _paired_macro_f1_difference(
+    base: list[Observation],
+    other: list[Observation],
+    *,
+    seed: int,
+    resamples: int = 2000,
+) -> Interval:
+    """Bootstrap pareado do delta de F1 macro, reamostrando famílias."""
+
+    def by_family(group: list[Observation]) -> dict[str, list[dict[str, Any]]]:
+        rows: dict[str, list[dict[str, Any]]] = defaultdict(list)
+        for observation in group:
+            rows[_scenario_family(observation.item_id)].append(observation.score.details)
+        return rows
+
+    base_by_family = by_family(base)
+    other_by_family = by_family(other)
+    families = sorted(set(base_by_family) & set(other_by_family))
+    if not families:
+        raise DomainError("prompts sem famílias em comum")
+
+    def metric(rows: dict[str, list[dict[str, Any]]], selected: list[str]) -> float:
+        details = [detail for family in selected for detail in rows[family]]
+        return float(_classification_metrics(details)["macro_f1"])
+
+    point = metric(other_by_family, families) - metric(base_by_family, families)
+    if len(families) == 1:
+        return Interval(point=point, lower=point, upper=point, n=1)
+    rng = random.Random(seed)
+    samples = []
+    for _ in range(resamples):
+        selected = rng.choices(families, k=len(families))
+        samples.append(metric(other_by_family, selected) - metric(base_by_family, selected))
+    ordered = sorted(samples)
+    return Interval(
+        point=point,
+        lower=ordered[int(0.025 * resamples)],
+        upper=ordered[min(int(0.975 * resamples), resamples - 1)],
+        n=len(families),
+    )
+
+
+def overall_pareto(
+    summaries: Iterable[ConfigSummary], *, required_tasks: frozenset[str] | None = None
+) -> tuple[ParetoPoint, ...]:
     """Um ponto por (modelo, prompt), com qualidade média entre tarefas e custo somado."""
     grouped: dict[tuple[str, str], list[ConfigSummary]] = defaultdict(list)
     for summary in summaries:
         grouped[(summary.key.model, summary.key.prompt_name)].append(summary)
-    return pareto_frontier(_points_from(grouped))
+    return pareto_frontier(_points_from(_eligible_groups(grouped, required_tasks=required_tasks)))
 
 
-def all_points(summaries: Iterable[ConfigSummary]) -> tuple[ParetoPoint, ...]:
+def all_points(
+    summaries: Iterable[ConfigSummary], *, required_tasks: frozenset[str] | None = None
+) -> tuple[ParetoPoint, ...]:
     grouped: dict[tuple[str, str], list[ConfigSummary]] = defaultdict(list)
     for summary in summaries:
         grouped[(summary.key.model, summary.key.prompt_name)].append(summary)
-    return _points_from(grouped)
+    return _points_from(_eligible_groups(grouped, required_tasks=required_tasks))
+
+
+def pareto_exclusions(
+    summaries: Iterable[ConfigSummary], *, required_tasks: frozenset[str] | None = None
+) -> dict[str, tuple[str, ...]]:
+    grouped: dict[tuple[str, str], list[ConfigSummary]] = defaultdict(list)
+    for summary in summaries:
+        grouped[(summary.key.model, summary.key.prompt_name)].append(summary)
+    exclusions: dict[str, tuple[str, ...]] = {}
+    for (model, prompt), configs in sorted(grouped.items()):
+        reasons = _pareto_exclusion_reasons(configs, required_tasks=required_tasks)
+        if reasons:
+            exclusions[f"{model} / {prompt}"] = reasons
+    return exclusions
+
+
+def _eligible_groups(
+    grouped: dict[tuple[str, str], list[ConfigSummary]],
+    *,
+    required_tasks: frozenset[str] | None,
+) -> dict[tuple[str, str], list[ConfigSummary]]:
+    return {
+        key: configs
+        for key, configs in grouped.items()
+        if not _pareto_exclusion_reasons(configs, required_tasks=required_tasks)
+    }
+
+
+def _pareto_exclusion_reasons(
+    configs: list[ConfigSummary], *, required_tasks: frozenset[str] | None
+) -> tuple[str, ...]:
+    reasons: list[str] = []
+    maximum_error = max((config.error_rate for config in configs), default=1.0)
+    if maximum_error > MAX_PUBLISHABLE_ERROR_RATE:
+        reasons.append(f"taxa de erro {maximum_error:.1%} excede {MAX_PUBLISHABLE_ERROR_RATE:.1%}")
+    if required_tasks is not None:
+        missing = sorted(required_tasks - {config.key.task for config in configs})
+        if missing:
+            reasons.append("tarefas ausentes: " + ", ".join(missing))
+    return tuple(reasons)
 
 
 def _points_from(grouped: dict[tuple[str, str], list[ConfigSummary]]) -> tuple[ParetoPoint, ...]:

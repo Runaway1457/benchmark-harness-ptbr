@@ -33,6 +33,10 @@ jobs:
         run: uv run mypy
       - name: Tests
         run: uv run pytest
+      - name: Verify committed reports are reproducible
+        run: |
+          uv run ptbr-benchmark report
+          git diff --exit-code -- docs/results.md site/index.html site/summary.json
       - name: Baseline end-to-end pipeline
         run: |
           export PTBR_BENCHMARK_RESULTS_DIR="${RUNNER_TEMP}/ptbr-benchmark-results"

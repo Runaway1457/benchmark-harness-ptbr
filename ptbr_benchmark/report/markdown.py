@@ -69,12 +69,46 @@ def _intro(context: ReportContext) -> str:
         _INTRO,
         "",
     ]
-    if all(summary.key.provider == "baseline" for summary in context.summaries):
+    if context.publication.status == "calibration":
         lines.extend(
             [
                 "> **Estado: calibração do harness.** Este snapshot contém somente o baseline "
                 "determinístico. Ele valida o pipeline e não sustenta comparação entre "
                 "fornecedores.",
+                "",
+                "### Portões de calibração",
+                "",
+                _row("Gate", "Estado", "Evidência"),
+                "|---|:---:|---|",
+                *(
+                    _row(
+                        check.label,
+                        "passou" if check.passed else "bloqueado",
+                        check.detail,
+                    )
+                    for check in context.publication.checks
+                ),
+                "",
+            ]
+        )
+    elif context.publication.status == "pre-publication":
+        lines.extend(
+            [
+                "> **Estado: pré-publicação.** Há resultados de modelos reais, mas pelo "
+                "menos um portão executável ainda bloqueia a publicação.",
+                "",
+                "### Portões de publicação",
+                "",
+                _row("Gate", "Estado", "Evidência"),
+                "|---|:---:|---|",
+                *(
+                    _row(
+                        check.label,
+                        "passou" if check.passed else "bloqueado",
+                        check.detail,
+                    )
+                    for check in context.publication.checks
+                ),
                 "",
             ]
         )
@@ -167,8 +201,12 @@ def _extras(task: str, summaries: Sequence[ConfigSummary]) -> list[str]:
     if task == "grounded_qa":
         return _rate_rows(
             summaries,
-            headers=("Citação inventada", "Resposta inventada"),
-            keys=("invented_citation_rate", "hallucinated_answer_rate"),
+            headers=("Citação inventada", "Resposta inventada", "Erro de contrato"),
+            keys=(
+                "invented_citation_rate",
+                "hallucinated_answer_rate",
+                "response_contract_error_rate",
+            ),
         )
     if task == "fiscal_extraction":
         return _fiscal_extras(summaries)
@@ -177,6 +215,12 @@ def _extras(task: str, summaries: Sequence[ConfigSummary]) -> list[str]:
             summaries,
             headers=("F1 macro", "Acurácia", "Rótulo inválido"),
             keys=("macro_f1", "accuracy", "invalid_label_rate"),
+        )
+    if task == "regional_ptbr":
+        return _rate_rows(
+            summaries,
+            headers=("Resposta fora do formato",),
+            keys=("invalid_answer_rate",),
         )
     return []
 

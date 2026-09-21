@@ -21,7 +21,7 @@ from ptbr_benchmark.domain.models import (
     Usage,
     utc_now,
 )
-from ptbr_benchmark.providers.pricing import PricingTable
+from ptbr_benchmark.providers.pricing import ModelPrice, PricingTable
 from ptbr_benchmark.report.aggregate import (
     all_points,
     overall_pareto,
@@ -33,6 +33,7 @@ from ptbr_benchmark.report.aggregate import (
 )
 from ptbr_benchmark.report.build import build_context, write_reports
 from ptbr_benchmark.report.context import ReportContext, TaskInfo
+from ptbr_benchmark.report.gates import PublicationDecision, evaluate_publication
 from ptbr_benchmark.report.html import render_html
 from ptbr_benchmark.report.markdown import render_markdown
 from ptbr_benchmark.scoring.judge import JudgeValidation
@@ -325,6 +326,62 @@ class TestSensitivityAndPareto:
         frontier = overall_pareto(summaries)
         assert [p.label for p in frontier] == ["cheap / minimal"]
 
+    def test_failed_configuration_never_enters_decision_surface(self) -> None:
+        failed = Observation(
+            item_id="a",
+            task="ticket_routing",
+            provider="openai",
+            model="broken-model",
+            prompt_name="optimized",
+            prompt_version="v",
+            repetition=0,
+            completion=Completion(
+                text="",
+                model="broken-model",
+                usage=Usage(0, 0, estimated=True),
+                latency_ms=0.0,
+                error="HTTP 400: unsupported parameter",
+            ),
+            score=Score(0.0, ScoringKind.CLASSIFICATION, {}),
+            cost_usd=0.0,
+        )
+        summaries = summarize([failed], seed=1)
+        assert all_points(summaries) == ()
+        assert overall_pareto(summaries) == ()
+
+    def test_ticket_prompt_sensitivity_uses_macro_f1_everywhere(self) -> None:
+        observations = []
+        for prompt, minority_prediction in (("minimal", "A"), ("optimized", "B")):
+            observations.extend(
+                make_observation(
+                    item_id=f"majority-{index}",
+                    score=1.0,
+                    task="ticket_routing",
+                    prompt_name=prompt,
+                    details={"expected": "A", "actual": "A", "valid_label": True},
+                )
+                for index in range(9)
+            )
+            observations.append(
+                make_observation(
+                    item_id="minority",
+                    score=1.0 if minority_prediction == "B" else 0.0,
+                    task="ticket_routing",
+                    prompt_name=prompt,
+                    details={
+                        "expected": "B",
+                        "actual": minority_prediction,
+                        "valid_label": True,
+                    },
+                )
+            )
+        summaries = summarize(observations, seed=1)
+        comparison = paired_prompt_sensitivity(observations, seed=1)[0]
+        expected = {summary.key.prompt_name: summary.quality.point for summary in summaries}
+        assert comparison.quality_a.point == pytest.approx(expected["minimal"])
+        assert comparison.quality_b.point == pytest.approx(expected["optimized"])
+        assert comparison.delta > 0
+
 
 def _context(**overrides: object) -> ReportContext:
     summaries = summarize(
@@ -374,6 +431,8 @@ def _context(**overrides: object) -> ReportContext:
         "dataset_hashes": {"ticket_routing": "abcdef0123456789xyz"},
         "dataset_sizes": {"ticket_routing": 150},
         "dataset_families": {"ticket_routing": 48},
+        "publication": PublicationDecision(status="pre-publication", checks=()),
+        "pareto_exclusions": {},
     }
     base.update(overrides)
     return ReportContext(**base)  # type: ignore[arg-type]
@@ -439,7 +498,10 @@ class TestRenderers:
             summary,
             key=replace(summary.key, provider="baseline", model="baseline-rules"),
         )
-        context = _context(summaries=(baseline_summary,))
+        context = _context(
+            summaries=(baseline_summary,),
+            publication=PublicationDecision(status="calibration", checks=()),
+        )
         assert "Controle, não ranking" in render_html(context)
         assert "Estado: calibração do harness" in render_markdown(context)
 
@@ -480,8 +542,9 @@ class TestBuild:
         assert markdown_path.exists() and html_path.exists()
         summary = json.loads(summary_path.read_text())
         assert summary["configurations"][0]["model"] == "cheap"
-        assert summary["frontier"] == ["cheap / minimal"]
-        assert summary["publication_status"] == "published"
+        assert summary["frontier"] == []
+        assert summary["publication_status"] == "pre-publication"
+        assert summary["publication_gates"]["passed"] is False
         assert summary["statistical_unit"] == "semantic_family"
 
     def test_build_context_requires_runs_and_consistent_datasets(
@@ -512,6 +575,88 @@ class TestBuild:
             build_context(
                 results_dir=tmp_path, tasks=tuple(tasks.values()), pricing=pricing, seed=1
             )
+
+
+class TestPublicationGates:
+    def test_task_matrix_uses_observed_tasks_not_manifest_claims(self) -> None:
+        observations = [
+            replace(
+                make_observation(
+                    item_id="a",
+                    score=1.0,
+                    task="task_a",
+                    model="real-model-2026-09-01",
+                    repetition=repetition,
+                ),
+                provider="openai",
+            )
+            for repetition in range(3)
+        ]
+        now = utc_now()
+        run = RunResult(
+            RunSpec(
+                ("task_a", "task_b"),
+                "openai",
+                "real-model-2026-09-01",
+                "minimal",
+                3,
+                42,
+                Split.PUBLIC,
+            ),
+            now,
+            now,
+            tuple(observations),
+            {"task_a": "a", "task_b": "b"},
+            "0.1.0",
+        )
+        decision = evaluate_publication(
+            runs=(run,),
+            summaries=summarize(observations, seed=1),
+            required_tasks=frozenset({"task_a", "task_b"}),
+            dataset_sizes={"task_a": 150, "task_b": 150},
+            pricing=PricingTable(
+                as_of=now.date().isoformat(),
+                prices={"real-model-2026-09-01": ModelPrice(1.0, 2.0)},
+            ),
+        )
+        task_matrix = next(check for check in decision.checks if check.key == "task_matrix")
+        assert task_matrix.passed is False
+        assert task_matrix.detail == "0/1 configurações completas"
+
+    def test_cascade_rejects_placeholder_component_in_model_id(self) -> None:
+        observation = replace(
+            make_observation(item_id="a", score=1.0, model="expensive"),
+            provider="cascade[baseline:baseline-rules->openai:expensive]",
+        )
+        now = utc_now()
+        run = RunResult(
+            RunSpec(
+                ("ticket_routing",),
+                observation.provider,
+                "baseline-rules+expensive",
+                "minimal",
+                1,
+                42,
+                Split.PUBLIC,
+            ),
+            now,
+            now,
+            (observation,),
+            {"ticket_routing": "h"},
+            "0.1.0",
+        )
+        decision = evaluate_publication(
+            runs=(run,),
+            summaries=summarize([observation], seed=1),
+            required_tasks=frozenset({"ticket_routing"}),
+            dataset_sizes={"ticket_routing": 150},
+            pricing=PricingTable(
+                as_of=now.date().isoformat(),
+                prices={"expensive": ModelPrice(1.0, 2.0)},
+            ),
+        )
+        exact_ids = next(check for check in decision.checks if check.key == "exact_model_ids")
+        assert exact_ids.passed is False
 
 
 def test_interval_helper_used_in_context() -> None:

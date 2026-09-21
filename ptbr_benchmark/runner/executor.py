@@ -124,6 +124,24 @@ class Executor:
         self._concurrency = max_concurrency
         self._sleep = sleep
 
+    def preflight(self, request: CompletionRequest) -> Completion:
+        """Executa uma única chamada não cacheada antes de iniciar a matriz paga."""
+        completion = call_with_retry(
+            self._provider,
+            request,
+            policy=self._retry,
+            rng=random.Random(cache_key(self._provider.name, request)),
+            sleep=self._sleep,
+        )
+        if completion.error is not None:
+            raise DomainError(f"preflight do provedor falhou: {completion.error}")
+        if completion.cost_usd is None and self._pricing.price_for(completion.model) is None:
+            raise DomainError(
+                f"preflight devolveu modelo sem preço {completion.model!r}; "
+                "atualize pricing.json antes da rodada"
+            )
+        return completion
+
     def run(
         self,
         spec: RunSpec,

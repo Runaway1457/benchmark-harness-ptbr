@@ -244,6 +244,24 @@ class TestExecutor:
         with pytest.raises(ValueError, match="positivo"):
             Executor(provider=ScriptedProvider(), pricing=pricing, max_concurrency=0)
 
+    def test_preflight_fails_before_full_matrix(self, pricing: PricingTable) -> None:
+        broken = Executor(
+            provider=ScriptedProvider(ProviderError("HTTP 400", retryable=False)),
+            pricing=pricing,
+            max_concurrency=1,
+        )
+        request = CompletionRequest(model="cheap", system="s", user="u")
+        with pytest.raises(DomainError, match="preflight"):
+            broken.preflight(request)
+
+        unknown = Executor(
+            provider=ScriptedProvider(make_completion("ok", model="unknown")),
+            pricing=pricing,
+            max_concurrency=1,
+        )
+        with pytest.raises(DomainError, match="sem preço"):
+            unknown.preflight(request)
+
     def test_seed_differs_per_repetition(
         self, tasks: dict[str, TaskDefinition], pricing: PricingTable
     ) -> None:

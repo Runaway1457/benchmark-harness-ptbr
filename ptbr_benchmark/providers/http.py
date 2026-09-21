@@ -17,6 +17,8 @@ from ptbr_benchmark.domain.models import Completion, Usage
 from ptbr_benchmark.providers.base import CompletionRequest, ProviderError, estimate_tokens
 
 _RETRYABLE_STATUS = frozenset({408, 409, 425, 429, 500, 502, 503, 504})
+_REASONING_MODEL_PREFIXES = ("o1", "o3", "o4", "gpt-5", "gpt-6")
+_LEGACY_TOKEN_PARAMETER_PREFIXES = ("gpt-3.5", "gpt-4-turbo", "gpt-4-")
 
 
 def _classify(response: httpx.Response) -> None:
@@ -138,14 +140,21 @@ class OpenAIProvider:
     def complete(self, request: CompletionRequest) -> Completion:
         body: dict[str, Any] = {
             "model": request.model,
-            "max_tokens": request.max_tokens,
-            "temperature": request.temperature,
             "messages": [
                 {"role": "system", "content": request.system},
                 {"role": "user", "content": request.user},
             ],
         }
-        if request.seed is not None:
+        normalized_model = request.model.lower()
+        legacy_tokens = normalized_model.startswith(_LEGACY_TOKEN_PARAMETER_PREFIXES)
+        body["max_tokens" if legacy_tokens else "max_completion_tokens"] = request.max_tokens
+        reasoning_model = normalized_model.startswith(_REASONING_MODEL_PREFIXES)
+        if not reasoning_model:
+            body["temperature"] = request.temperature
+        # Chat Completions exposes seed only for supported sampling models.
+        # Reasoning families reject or ignore it, so repetition remains an
+        # independent call but is explicitly not presented as seeded there.
+        if request.seed is not None and not reasoning_model:
             body["seed"] = request.seed
         headers = {"authorization": f"Bearer {self._key}", "content-type": "application/json"}
         started = perf_counter()

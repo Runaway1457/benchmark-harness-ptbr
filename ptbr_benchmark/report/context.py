@@ -6,6 +6,7 @@ from dataclasses import dataclass
 
 from ptbr_benchmark.domain.metrics import ParetoPoint
 from ptbr_benchmark.report.aggregate import ConfigSummary, PromptSensitivity
+from ptbr_benchmark.report.gates import PublicationDecision
 from ptbr_benchmark.scoring.judge import JudgeValidation
 
 
@@ -29,3 +30,5 @@ class ReportContext:
     dataset_hashes: dict[str, str]
     dataset_sizes: dict[str, int]
     dataset_families: dict[str, int]
+    publication: PublicationDecision
+    pareto_exclusions: dict[str, tuple[str, ...]]

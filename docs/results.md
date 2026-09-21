@@ -6,6 +6,17 @@ Toda métrica principal vem com intervalo de confiança de 95% por bootstrap sob
 
 > **Estado: calibração do harness.** Este snapshot contém somente o baseline determinístico. Ele valida o pipeline e não sustenta comparação entre fornecedores.
 
+### Portões de calibração
+
+| Gate | Estado | Evidência |
+|---|:---:|---|
+| 750 itens públicos | passou | 750 itens em 5 tarefas |
+| Controle baseline concluído | passou | 5/5 tarefas |
+| Duas variantes de prompt no baseline | passou | 2 variantes de prompt |
+| Cada prompt baseline cobre todas as tarefas | passou | 2/2 configurações completas |
+| Três observações baseline por item | passou | mínimo exigido: 3 |
+| Taxa de erro do baseline em até 2% | passou | máximo observado: 0.0% |
+
 ## Fronteira de Pareto
 
 Qualidade média entre tarefas, custo médio por item e p95 de latência.
@@ -85,10 +96,10 @@ Resposta a pergunta com citação obrigatória de trecho.
 | baseline-rules / minimal | 43.7% [31.9%, 55.7%] | $0.00000 | 0 | 6 | 0.0% | 150 | 0.0% |
 | baseline-rules / optimized | 43.7% [31.9%, 55.7%] | $0.00000 | 0 | 6 | 0.0% | 150 | 0.0% |
 
-| Modelo / prompt | Citação inventada | Resposta inventada |
-|---|---:|---:|
-| baseline-rules / minimal | 0.0% | 18.7% |
-| baseline-rules / optimized | 0.0% | 18.7% |
+| Modelo / prompt | Citação inventada | Resposta inventada | Erro de contrato |
+|---|---:|---:|---:|
+| baseline-rules / minimal | 0.0% | 18.7% | 0.0% |
+| baseline-rules / optimized | 0.0% | 18.7% | 0.0% |
 
 ## regional_ptbr
 
@@ -98,6 +109,11 @@ Interpretação de expressão regional em múltipla escolha.
 |---|---:|---:|---:|---:|---:|---:|---:|
 | baseline-rules / minimal | 32.4% [20.9%, 44.4%] | $0.00000 | 0 | 0 | 0.0% | 150 | 0.0% |
 | baseline-rules / optimized | 32.4% [20.9%, 44.4%] | $0.00000 | 0 | 0 | 0.0% | 150 | 0.0% |
+
+| Modelo / prompt | Resposta fora do formato |
+|---|---:|
+| baseline-rules / minimal | 0.0% |
+| baseline-rules / optimized | 0.0% |
 
 ## Sensibilidade a prompt
 
@@ -109,7 +125,7 @@ Mesma tarefa, mesmo modelo, prompts diferentes. O IC 95% é calculado sobre o de
 | grounded_qa | baseline-rules | minimal | optimized | 43.7% | 43.7% | +0.0 pp | [+0.0, +0.0] pp | não |
 | lgpd_refusal | baseline-rules | minimal | optimized | 72.9% | 72.9% | +0.0 pp | [+0.0, +0.0] pp | não |
 | regional_ptbr | baseline-rules | minimal | optimized | 32.4% | 32.4% | +0.0 pp | [+0.0, +0.0] pp | não |
-| ticket_routing | baseline-rules | minimal | optimized | 79.2% | 79.2% | +0.0 pp | [+0.0, +0.0] pp | não |
+| ticket_routing | baseline-rules | minimal | optimized | 77.3% | 77.3% | +0.0 pp | [+0.0, +0.0] pp | não |
 
 ## Validação de juiz
 

@@ -13,6 +13,12 @@ Este projeto é um benchmark reproduzível e um harness independente de provedor
 > [!IMPORTANT]
 > O snapshot versionado é uma **calibração do harness**, não um ranking de fornecedores. Ele executa o baseline determinístico de ponta a ponta, sem chave de API. Conclusões sobre modelos comerciais só serão publicadas depois da matriz real completar 750 itens × 3 repetições sob os mesmos hashes.
 
+<div align="center">
+  <a href="site/index.html"><img src="docs/assets/dashboard-preview.svg" alt="Dashboard de decisão do EvalBR com fronteira de Pareto e diagnósticos por tarefa" width="100%"></a>
+</div>
+
+O dashboard não é uma imagem decorativa: ele é gerado exclusivamente dos artefatos versionados em `results/`, sem backend, e a mesma entrada produz o mesmo HTML byte a byte.
+
 ## O que está sendo medido
 
 | Tarefa | Falha operacional | Métrica principal | Itens | Famílias independentes |
@@ -39,7 +45,7 @@ Os 750 itens públicos correspondem a 339 famílias semânticas. As 411 variante
 ## Arquitetura
 
 <div align="center">
-  <img src="docs/assets/benchmark-architecture.svg" alt="Arquitetura do benchmark e harness PT-BR" width="100%">
+  <img src="docs/assets/measurement-lifecycle.svg" alt="Ciclo de medição do EvalBR, do contrato experimental aos gates de publicação" width="100%">
 </div>
 
 O núcleo não depende de SDK de fornecedor. O adapter devolve um contrato único de `Completion`; cada tarefa controla build, parse, validação e score; o runner controla concorrência, cache e retry; a camada estatística consome observações imutáveis.
@@ -49,7 +55,7 @@ O núcleo não depende de SDK de fornecedor. O adapter devolve um contrato únic
 Pré-requisitos: Python 3.12+ e [uv](https://docs.astral.sh/uv/).
 
 ```bash
-git clone <url-do-repositorio> benchmark-harness-ptbr
+git clone https://github.com/Runaway1457/benchmark-harness-ptbr.git
 cd benchmark-harness-ptbr
 uv sync --extra dev
 make check
@@ -69,13 +75,17 @@ uv run ptbr-benchmark run \
 uv run ptbr-benchmark report
 ```
 
-O provider Anthropic usa a mesma interface. Respostas são cacheadas por provedor, modelo exato, prompt renderizado e seed. Timeout, 429 e 5xx usam backoff exponencial com jitter; falhas terminais permanecem visíveis no relatório.
+Antes da matriz paga, uma chamada de preflight valida autenticação, parâmetros e preço. O provider Anthropic usa a mesma interface. Respostas são cacheadas por provedor, modelo exato, prompt renderizado e repetição. Timeout, 429 e 5xx usam backoff exponencial com jitter; falhas terminais permanecem visíveis no relatório.
+
+## Publicação é um estado calculado
+
+O relatório só muda de `pre-publication` para `published` quando o código verifica: pelo menos dois modelos reais, dois prompts, três observações por item, cinco tarefas completas, preço válido e taxa de erro do provedor ≤ 2%. Configuração quebrada continua nos diagnósticos, mas fica fora da superfície de decisão e da fronteira de Pareto.
 
 ## Estado verificável
 
 - 750 itens públicos e 339 famílias semânticas.
 - 4.500 observações no snapshot de calibração.
-- 177 testes; cobertura branch-aware atual de 98,8%.
+- 180+ testes automatizados com cobertura branch-aware.
 - Ruff, MyPy estrito, Bandit e `pip-audit` como gates.
 - Relatório Markdown, JSON e dashboard HTML autocontido.
 - Dados 100% sintéticos; nenhum registro real de cliente, pessoa ou empresa.
@@ -84,8 +94,8 @@ Há limites declarados: os gabaritos curados têm um autor primário; dupla anot
 
 Leia [Metodologia](docs/methodology.md), [Dataset card](docs/dataset-card.md), [Resultados](docs/results.md), [Threat model](docs/threat-model.md) e [Reprodução](docs/reproduction.md).
 
-## Responsável
+---
 
-Projetado e mantido por **Gabriel Borges**. As conclusões do benchmark são sustentadas por datasets versionados, scorers executáveis e artefatos reproduzíveis — não por narrativa.
+**Gabriel Borges** · AI Engineering · Evaluation Systems · Decision Infrastructure
 
 Licença Apache-2.0.

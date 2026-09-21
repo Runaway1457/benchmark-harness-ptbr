@@ -259,6 +259,17 @@ class TestGrounded:
         assert hallucinated.value == 0.0 and hallucinated.details["hallucinated_answer"]
         assert phrase.value == 1.0
 
+        noncanonical = score_grounded_answer(
+            expected_answer=None,
+            actual_answer="Não há essa informação nos trechos fornecidos.",
+            cited_ids=[],
+            valid_ids=self.valid,
+            expected_ids=frozenset(),
+        )
+        assert noncanonical.value == 0.0
+        assert noncanonical.details["response_contract_error"] is True
+        assert noncanonical.details["hallucinated_answer"] is False
+
     def test_missed_answer(self) -> None:
         score = score_grounded_answer(
             expected_answer="15 dias",

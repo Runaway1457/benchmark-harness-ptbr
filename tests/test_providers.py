@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import random
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import httpx
@@ -32,6 +33,16 @@ class ScriptedProvider:
         if isinstance(response, ProviderError):
             raise response
         return response
+
+
+class ConstantProvider:
+    name = "constant"
+
+    def __init__(self, response: Completion) -> None:
+        self._response = response
+
+    def complete(self, request: CompletionRequest) -> Completion:
+        return self._response
 
 
 def request_for(task: TaskDefinition, item_id: str = "x") -> CompletionRequest:
@@ -193,6 +204,29 @@ class TestCascade:
         with pytest.raises(DomainError, match="preço ausente"):
             cascade.complete(request_for(task))
 
+    def test_metrics_are_thread_safe(
+        self, tasks: dict[str, TaskDefinition], pricing: PricingTable
+    ) -> None:
+        task = tasks["ticket_routing"]
+        cascade = CascadeProvider(
+            primary=ConstantProvider(
+                make_completion('{"category": "cobranca", "confidence": 0.9}')
+            ),
+            primary_model="cheap",
+            fallback=ConstantProvider(make_completion("{}", model="expensive")),
+            fallback_model="expensive",
+            tasks=tasks,
+            pricing=pricing,
+        )
+        request = request_for(task)
+        with ThreadPoolExecutor(max_workers=16) as pool:
+            completions = tuple(pool.map(cascade.complete, (request for _ in range(256))))
+
+        assert len(completions) == 256
+        assert cascade.total == 256
+        assert cascade.escalations == 0
+        assert cascade.escalation_rate == 0.0
+
 
 def _client(handler: httpx.MockTransport) -> httpx.Client:
     return httpx.Client(transport=handler)
@@ -300,6 +334,31 @@ class TestOpenAI:
         assert seen["auth"] == "Bearer k"
         body = seen["body"]
         assert isinstance(body, dict) and body["seed"] == 11
+        assert body["max_completion_tokens"] == 1024
+        assert "max_tokens" not in body
+
+    def test_reasoning_model_omits_unsupported_sampling_parameters(self) -> None:
+        seen: dict[str, object] = {}
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            seen["body"] = json.loads(request.content)
+            return httpx.Response(
+                200,
+                json={
+                    "model": "gpt-5.6",
+                    "choices": [{"message": {"content": "ok"}}],
+                    "usage": {"prompt_tokens": 1, "completion_tokens": 1},
+                },
+            )
+
+        provider = OpenAIProvider(api_key="k", client=_client(httpx.MockTransport(handler)))
+        provider.complete(
+            CompletionRequest(model="gpt-5.6", system="s", user="u", seed=9, temperature=0.0)
+        )
+        body = seen["body"]
+        assert isinstance(body, dict)
+        assert body["max_completion_tokens"] == 1024
+        assert "temperature" not in body and "seed" not in body
 
     def test_empty_choices_is_retryable(self) -> None:
         def handler(request: httpx.Request) -> httpx.Response:

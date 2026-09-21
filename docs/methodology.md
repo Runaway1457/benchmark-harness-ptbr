@@ -60,8 +60,8 @@ Custo por item é o custo médio de **uma inferência**. Repetições servem par
 medir variância e não multiplicam a unidade econômica publicada. O custo de
 uma observação é `tokens × preço` usando a tabela
 `ptbr_benchmark/providers/pricing.json`, que carrega a data de referência impressa no
-relatório. Modelo sem preço cadastrado entra com custo zero e gera aviso no
-log; nunca é silencioso. Quando o provedor não devolve uso de tokens, a
+relatório. Modelo sem preço cadastrado **interrompe a rodada**: custo
+desconhecido nunca é convertido em zero. Quando o provedor não devolve uso de tokens, a
 contagem é estimada por caracteres e a configuração é marcada com `~`. Custo
 estimado não é comparável com custo medido.
 
@@ -76,7 +76,11 @@ mesma rodada.
 
 ## Variância entre repetições
 
-Cada item é executado `--repetitions` vezes (padrão 3) com seeds distintas.
+Cada item é executado `--repetitions` vezes (padrão 3) com identificadores de
+repetição distintos. O adaptador envia `seed` somente quando a API/modelo a
+suporta; em provedores sem seed controlável, as chamadas continuam
+independentes, mas o relatório não promete determinismo que o fornecedor não
+oferece.
 A **divergência** é a fração de itens em que as repetições produziram
 pontuações diferentes. Modelo não determinístico é a regra; a coluna existe
 para tornar isso visível.
@@ -91,7 +95,9 @@ do delta B−A.
 ## Fronteira de Pareto
 
 Cada configuração (modelo, prompt) vira um ponto com qualidade média entre
-tarefas, custo médio por item e p95 máximo. Um ponto está na fronteira quando
+tarefas, custo médio por item e p95 máximo. Configurações com taxa de erro de
+provedor acima de 2% ou matriz de tarefas incompleta são excluídas da superfície
+de decisão antes do cálculo. Um ponto elegível está na fronteira quando
 nenhum outro é melhor ou igual em tudo e estritamente melhor em pelo menos um
 eixo. Custo é arredondado a 6 casas e latência a milissegundo antes da
 comparação, para que ruído de microssegundo não decida a fronteira.

@@ -59,7 +59,9 @@ _LGPD_NOTE = (
 )
 _GQA_NOTE = (
     "Citação inventada é apontar para um trecho que não existe. Resposta inventada é "
-    "responder uma pergunta cuja resposta não está no documento. A primeira zera o item."
+    "responder uma pergunta cuja resposta não está no documento. Erro de contrato é uma "
+    "recusa semanticamente correta fora do formato exigido; continua falhando, mas não é "
+    "rotulada como alucinação."
 )
 _FISCAL_NOTE = (
     "A média por documento esconde onde o modelo erra. CNPJ e valor total pesam mais na "
@@ -194,12 +196,11 @@ def _topbar() -> str:
 
 
 def _header(context: ReportContext) -> str:
-    calibration = all(summary.key.provider == "baseline" for summary in context.summaries)
-    state = (
-        "Calibração do harness · matriz de modelos pendente"
-        if calibration
-        else "Benchmark publicado"
-    )
+    state = {
+        "calibration": "Calibração do harness · matriz de modelos pendente",
+        "pre-publication": "Pré-publicação · gates ainda não atendidos",
+        "published": "Benchmark publicado · gates aprovados",
+    }[context.publication.status]
     bars = (28, 44, 34, 68, 51, 79, 58, 92, 70, 48, 63, 84, 55, 73, 96, 67, 81, 60)
     signal = "".join(
         f'<i style="--h:{height}%;--o:{0.42 + (index % 4) * 0.16:.2f}"></i>'
@@ -247,7 +248,7 @@ def _metrics(context: ReportContext) -> str:
 
 
 def _pareto_section(context: ReportContext) -> str:
-    calibration = all(summary.key.provider == "baseline" for summary in context.summaries)
+    calibration = context.publication.status == "calibration"
     parts = [
         '<section id="frontier">',
         '<div class="section-head"><div><p class="section-kicker">Decision surface</p>'
@@ -259,6 +260,20 @@ def _pareto_section(context: ReportContext) -> str:
             '<p class="calibration-banner"><strong>Controle, não ranking.</strong> '
             "A publicação atual contém somente o baseline determinístico para validar o pipeline. "
             "Nenhuma conclusão sobre fornecedores é apresentada sem rodadas reais.</p>"
+        )
+    elif context.publication.status == "pre-publication":
+        parts.append(
+            '<p class="calibration-banner"><strong>Pré-publicação.</strong> '
+            "Há chamadas de modelos reais, mas a matriz não pode ser tratada como publicada "
+            "até todos os portões executáveis passarem.</p>"
+        )
+    if context.pareto_exclusions:
+        excluded = "; ".join(
+            f"{label}: {', '.join(reasons)}" for label, reasons in context.pareto_exclusions.items()
+        )
+        parts.append(
+            '<p class="caution"><strong>Fora da superfície de decisão:</strong> '
+            f"{_esc(excluded)}.</p>"
         )
     parts.extend(
         [
@@ -302,6 +317,17 @@ def _pareto_table(points: Sequence[ParetoPoint], frontier: Sequence[ParetoPoint]
 
 
 def _task_section(name: str, description: str, summaries: Sequence[ConfigSummary]) -> str:
+    extras = _task_extras(name, summaries)
+    if any("cascade_escalation_rate" in summary.extra for summary in summaries):
+        extras.extend(
+            [
+                "<h3>Roteamento em cascata</h3>",
+                _rate_table(
+                    summaries,
+                    columns=(("Itens escalados", "cascade_escalation_rate"),),
+                ),
+            ]
+        )
     parts = [
         f'<section class="task-card" id="task-{_esc(name)}">',
         '<div class="section-head"><div>'
@@ -309,7 +335,7 @@ def _task_section(name: str, description: str, summaries: Sequence[ConfigSummary
         f"<h2>{_esc(name)}</h2></div>"
         f'<p class="note">{_esc(description)}.</p></div>',
         _summary_table(summaries),
-        *_task_extras(name, summaries),
+        *extras,
         "</section>",
     ]
     return "".join(parts)
@@ -379,6 +405,7 @@ def _task_extras(task: str, summaries: Sequence[ConfigSummary]) -> list[str]:
                 columns=(
                     ("Citação inventada", "invented_citation_rate"),
                     ("Resposta inventada", "hallucinated_answer_rate"),
+                    ("Erro de contrato", "response_contract_error_rate"),
                 ),
             ),
         ]
@@ -394,6 +421,14 @@ def _task_extras(task: str, summaries: Sequence[ConfigSummary]) -> list[str]:
                     ("Acurácia", "accuracy"),
                     ("Rótulo inválido", "invalid_label_rate"),
                 ),
+            ),
+        ]
+    if task == "regional_ptbr":
+        return [
+            "<h3>Validade da saída</h3>",
+            _rate_table(
+                summaries,
+                columns=(("Resposta fora do formato", "invalid_answer_rate"),),
             ),
         ]
     return []
@@ -479,6 +514,23 @@ def _reading_section(context: ReportContext) -> str:
         f'<div class="reading-card"><b>Juiz</b><p>{_esc(_NO_JUDGE)}</p></div>'
         "</div>",
     ]
+    if context.publication.checks:
+        header = [_th("Gate"), _th("Estado"), _th("Evidência")]
+        rows = [
+            "<tr>"
+            + _td(check.label)
+            + _td("passou" if check.passed else "bloqueado")
+            + _td(check.detail)
+            + "</tr>"
+            for check in context.publication.checks
+        ]
+        gate_title = (
+            "Portões de calibração executados"
+            if context.publication.status == "calibration"
+            else "Portões de publicação executados"
+        )
+        parts.append(f"<h3>{gate_title}</h3>")
+        parts.append(_table(header, rows))
     if context.judge_validations:
         header = [
             _th("Tarefa"),

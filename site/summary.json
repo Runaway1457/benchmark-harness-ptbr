@@ -3,6 +3,48 @@
   "pricing_as_of": "2026-09-15",
   "latest_run_at": "2026-09-21 17:05 UTC",
   "publication_status": "calibration",
+  "publication_gates": {
+    "status": "calibration",
+    "passed": false,
+    "checks": [
+      {
+        "key": "datasets",
+        "label": "750 itens públicos",
+        "passed": true,
+        "detail": "750 itens em 5 tarefas"
+      },
+      {
+        "key": "baseline",
+        "label": "Controle baseline concluído",
+        "passed": true,
+        "detail": "5/5 tarefas"
+      },
+      {
+        "key": "baseline_prompts",
+        "label": "Duas variantes de prompt no baseline",
+        "passed": true,
+        "detail": "2 variantes de prompt"
+      },
+      {
+        "key": "baseline_matrix",
+        "label": "Cada prompt baseline cobre todas as tarefas",
+        "passed": true,
+        "detail": "2/2 configurações completas"
+      },
+      {
+        "key": "baseline_repetitions",
+        "label": "Três observações baseline por item",
+        "passed": true,
+        "detail": "mínimo exigido: 3"
+      },
+      {
+        "key": "baseline_error_rate",
+        "label": "Taxa de erro do baseline em até 2%",
+        "passed": true,
+        "detail": "máximo observado: 0.0%"
+      }
+    ]
+  },
   "real_models": [],
   "configurations": [
     {
@@ -109,7 +151,8 @@
       "cache_hit_rate": 0.0,
       "extra": {
         "invented_citation_rate": 0.0,
-        "hallucinated_answer_rate": 0.1867
+        "hallucinated_answer_rate": 0.1867,
+        "response_contract_error_rate": 0.0
       }
     },
     {
@@ -134,7 +177,8 @@
       "cache_hit_rate": 0.0,
       "extra": {
         "invented_citation_rate": 0.0,
-        "hallucinated_answer_rate": 0.1867
+        "hallucinated_answer_rate": 0.1867,
+        "response_contract_error_rate": 0.0
       }
     },
     {
@@ -312,6 +356,7 @@
     "baseline-rules / minimal",
     "baseline-rules / optimized"
   ],
+  "pareto_exclusions": {},
   "dataset_hashes": {
     "fiscal_extraction": "a208609f1afd12d58c248f7c2413b62cbc268996e7f92c96aac54a4af237ec3c",
     "ticket_routing": "857490a0786511624e90cff76bac3631db8c5c9fa833f7b7eccfa9e72d7b0f9d",

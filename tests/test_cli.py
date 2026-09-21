@@ -107,13 +107,14 @@ def test_run_report_and_cascade_end_to_end(
 
     assert main(["report"]) == 0
     out = capsys.readouterr().out
-    assert "fronteira:" in out
+    assert "relatório:" in out
     assert (workspace / "docs" / "results.md").exists()
     page = (workspace / "site" / "index.html").read_text(encoding="utf-8")
     assert "ticket_routing" in page and "regional_ptbr" in page
     summary = json.loads((workspace / "site" / "summary.json").read_text())
     assert summary["dataset_sizes"]["ticket_routing"] == 150
     assert summary["dataset_families"]["ticket_routing"] == 48
+    assert summary["publication_status"] == "calibration"
 
 
 def test_run_errors(workspace: Path, capsys: pytest.CaptureFixture[str]) -> None:

@@ -21,7 +21,7 @@ from ptbr_benchmark.scoring.normalize import (
     parse_brl,
 )
 
-_UNANSWERABLE: frozenset[str] = frozenset(
+_CANONICAL_UNANSWERABLE: frozenset[str] = frozenset(
     {
         "",
         "nao consta",
@@ -35,6 +35,18 @@ _UNANSWERABLE: frozenset[str] = frozenset(
         "null",
         "none",
     }
+)
+
+_ABSTENTION_MARKERS: tuple[str, ...] = (
+    "nao consta",
+    "nao ha",
+    "nao existe",
+    "nao foi informado",
+    "nao foi encontrada",
+    "nao foi encontrado",
+    "sem informacao",
+    "informacao nao disponivel",
+    "impossivel responder",
 )
 
 _FENCE = re.compile(r"```(?:json)?\s*(.*?)```", re.DOTALL | re.IGNORECASE)
@@ -261,20 +273,25 @@ def score_grounded_answer(
         )
 
     unanswerable = expected_answer is None
-    said_unanswerable = actual_answer is None or normalize_text(actual_answer) in _UNANSWERABLE
+    normalized_answer = normalize_text(actual_answer) if actual_answer is not None else ""
+    canonical_abstention = actual_answer is None or normalized_answer in _CANONICAL_UNANSWERABLE
+    semantic_abstention = canonical_abstention or any(
+        marker in normalized_answer for marker in _ABSTENTION_MARKERS
+    )
 
     if unanswerable:
         return Score(
-            value=1.0 if said_unanswerable else 0.0,
+            value=1.0 if canonical_abstention else 0.0,
             kind=ScoringKind.EXACT,
             details={
                 "unanswerable": True,
-                "said_unanswerable": said_unanswerable,
-                "hallucinated_answer": not said_unanswerable,
+                "said_unanswerable": semantic_abstention,
+                "response_contract_error": semantic_abstention and not canonical_abstention,
+                "hallucinated_answer": not semantic_abstention,
             },
         )
 
-    if said_unanswerable or actual_answer is None or expected_answer is None:
+    if semantic_abstention or actual_answer is None or expected_answer is None:
         return Score(
             value=0.0,
             kind=ScoringKind.EXACT,

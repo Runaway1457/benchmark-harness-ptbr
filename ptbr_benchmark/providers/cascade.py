@@ -10,6 +10,7 @@ simples que funciona, e por isso está aqui e não em um artigo.
 from __future__ import annotations
 
 from collections.abc import Mapping
+from threading import Lock
 
 from ptbr_benchmark.domain.models import Completion, DomainError, Usage
 from ptbr_benchmark.providers.base import CompletionRequest, Provider
@@ -34,8 +35,19 @@ class CascadeProvider:
         self._fallback_model = fallback_model
         self._tasks = dict(tasks)
         self._pricing = pricing
-        self.escalations = 0
-        self.total = 0
+        self._counter_lock = Lock()
+        self._escalations = 0
+        self._total = 0
+
+    @property
+    def escalations(self) -> int:
+        with self._counter_lock:
+            return self._escalations
+
+    @property
+    def total(self) -> int:
+        with self._counter_lock:
+            return self._total
 
     @property
     def name(self) -> str:
@@ -45,16 +57,25 @@ class CascadeProvider:
 
     @property
     def escalation_rate(self) -> float:
-        return self.escalations / self.total if self.total else 0.0
+        with self._counter_lock:
+            return self._escalations / self._total if self._total else 0.0
+
+    def reset_counters(self) -> None:
+        """Reinicia métricas após um preflight que não pertence à rodada."""
+        with self._counter_lock:
+            self._escalations = 0
+            self._total = 0
 
     def complete(self, request: CompletionRequest) -> Completion:
-        self.total += 1
+        with self._counter_lock:
+            self._total += 1
         task = self._tasks[str(request.metadata["task"])]
         first = self._primary.complete(_with_model(request, self._primary_model))
         if not task.needs_escalation(task.parse(first.text)):
             return first
 
-        self.escalations += 1
+        with self._counter_lock:
+            self._escalations += 1
         second = self._fallback.complete(_with_model(request, self._fallback_model))
         return Completion(
             text=second.text,

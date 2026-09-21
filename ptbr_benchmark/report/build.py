@@ -12,10 +12,12 @@ from ptbr_benchmark.report.aggregate import (
     all_points,
     overall_pareto,
     paired_prompt_sensitivity,
+    pareto_exclusions,
     read_runs,
     summarize,
 )
 from ptbr_benchmark.report.context import ReportContext, TaskInfo
+from ptbr_benchmark.report.gates import evaluate_publication, is_real_provider
 from ptbr_benchmark.report.html import render_html
 from ptbr_benchmark.report.markdown import render_markdown
 from ptbr_benchmark.scoring.judge import JudgeValidation
@@ -36,8 +38,9 @@ def build_context(
         )
     observations = [o for run in runs for o in run.observations]
     summaries = summarize(observations, seed=seed)
-    points = all_points(summaries)
-    frontier = overall_pareto(summaries)
+    required_tasks = frozenset(task.name for task in tasks)
+    points = all_points(summaries, required_tasks=required_tasks)
+    frontier = overall_pareto(summaries, required_tasks=required_tasks)
 
     dataset_hashes: dict[str, str] = {}
     for run in runs:
@@ -53,6 +56,13 @@ def build_context(
         task.name: len({item.scenario_family for item in task.load_items(Split.PUBLIC)})
         for task in tasks
     }
+    publication = evaluate_publication(
+        runs=runs,
+        summaries=summaries,
+        required_tasks=required_tasks,
+        dataset_sizes=dataset_sizes,
+        pricing=pricing,
+    )
 
     return ReportContext(
         harness_version=__version__,
@@ -67,6 +77,8 @@ def build_context(
         dataset_hashes=dataset_hashes,
         dataset_sizes=dataset_sizes,
         dataset_families=dataset_families,
+        publication=publication,
+        pareto_exclusions=pareto_exclusions(summaries, required_tasks=required_tasks),
     )
 
 
@@ -98,7 +110,11 @@ def write_reports(
     html_path = site_dir / "index.html"
     summary_path = site_dir / "summary.json"
     real_models = sorted(
-        {summary.key.model for summary in context.summaries if summary.key.provider != "baseline"}
+        {
+            summary.key.model
+            for summary in context.summaries
+            if is_real_provider(summary.key.provider)
+        }
     )
     markdown_path.write_text(render_markdown(context), encoding="utf-8")
     html_path.write_text(render_html(context), encoding="utf-8")
@@ -108,10 +124,12 @@ def write_reports(
                 "harness_version": context.harness_version,
                 "pricing_as_of": context.pricing_as_of,
                 "latest_run_at": context.latest_run_at,
-                "publication_status": "published" if real_models else "calibration",
+                "publication_status": context.publication.status,
+                "publication_gates": context.publication.to_json(),
                 "real_models": real_models,
                 "configurations": [s.to_json() for s in context.summaries],
                 "frontier": [p.label for p in context.frontier],
+                "pareto_exclusions": context.pareto_exclusions,
                 "dataset_hashes": context.dataset_hashes,
                 "dataset_sizes": context.dataset_sizes,
                 "dataset_families": context.dataset_families,
