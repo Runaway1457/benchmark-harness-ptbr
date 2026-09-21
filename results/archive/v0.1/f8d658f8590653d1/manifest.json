@@ -1,0 +1,31 @@
+{
+  "run_id": "f8d658f8590653d1",
+  "spec": {
+    "tasks": [
+      "fiscal_extraction",
+      "ticket_routing",
+      "lgpd_refusal",
+      "grounded_qa",
+      "regional_ptbr"
+    ],
+    "provider": "cascade[baseline:baseline-rules->baseline:baseline-rules]",
+    "model": "baseline-rules+baseline-rules",
+    "prompt_name": "optimized",
+    "repetitions": 1,
+    "seed": 42,
+    "split": "public",
+    "limit": null
+  },
+  "started_at": "2026-09-16T01:07:33.613008+00:00",
+  "finished_at": "2026-09-16T01:07:34.049165+00:00",
+  "dataset_hashes": {
+    "fiscal_extraction": "a208609f1afd12d58c248f7c2413b62cbc268996e7f92c96aac54a4af237ec3c",
+    "ticket_routing": "c603dbd98d34f266de32089454fa48ed9d522d5ed4e9fe8caef5563cd3b706ff",
+    "lgpd_refusal": "d09492c78101201247919a33857a548fce4eb2693b104deef40f86752fbff25f",
+    "grounded_qa": "4739fd64e28a7a651cbf9d763824d5fbbcd1c4586d56c72baa05a05b62bdcc7b",
+    "regional_ptbr": "374ce98c55c98a33ed60b1a17eb7cf653a355556632dfc07905643b7121e8659"
+  },
+  "harness_version": "0.1.0",
+  "observations": 339,
+  "total_cost_usd": 0.0
+}

@@ -1,0 +1,1 @@
+{"id": "reg-001", "input": {"sentence": "Ô menino, vá se arretar, deixe de ser mole e resolva logo isso.", "options": ["Fique quieto", "Vá embora daqui", "Tome uma atitude, seja mais firme", "Vá descansar um pouco"], "region": "nordeste"}, "expected": {"answer": "C"}, "tags": ["arretar"]}

@@ -1,0 +1,337 @@
+{
+  "harness_version": "0.2.0",
+  "pricing_as_of": "2026-09-15",
+  "latest_run_at": "2026-09-21 17:05 UTC",
+  "publication_status": "calibration",
+  "real_models": [],
+  "configurations": [
+    {
+      "task": "fiscal_extraction",
+      "provider": "baseline",
+      "model": "baseline-rules",
+      "prompt": "minimal",
+      "quality": {
+        "mean": 0.9665,
+        "ci_lower": 0.9559,
+        "ci_upper": 0.9771
+      },
+      "cost_per_item_usd": 0.0,
+      "cost_estimated": false,
+      "latency_p50_ms": 0.1,
+      "latency_p95_ms": 0.2,
+      "repetition_disagreement_rate": 0.0,
+      "repetition_mean_std": 0.0,
+      "items": 150,
+      "observations": 450,
+      "error_rate": 0.0,
+      "cache_hit_rate": 0.0,
+      "extra": {
+        "parse_error_rate": 0.0,
+        "field_accuracy": {
+          "cfop": 1.0,
+          "chave_acesso": 1.0,
+          "data_emissao": 1.0,
+          "destinatario_cnpj": 0.88,
+          "destinatario_razao_social": 0.9,
+          "emitente_cnpj": 0.88,
+          "emitente_razao_social": 0.9267,
+          "emitente_uf": 1.0,
+          "natureza_operacao": 1.0,
+          "numero": 1.0,
+          "quantidade_itens": 1.0,
+          "serie": 1.0,
+          "valor_produtos": 1.0,
+          "valor_total": 1.0
+        },
+        "all_fields_correct_rate": 0.7333
+      }
+    },
+    {
+      "task": "fiscal_extraction",
+      "provider": "baseline",
+      "model": "baseline-rules",
+      "prompt": "optimized",
+      "quality": {
+        "mean": 0.9665,
+        "ci_lower": 0.9559,
+        "ci_upper": 0.9771
+      },
+      "cost_per_item_usd": 0.0,
+      "cost_estimated": false,
+      "latency_p50_ms": 0.1,
+      "latency_p95_ms": 0.2,
+      "repetition_disagreement_rate": 0.0,
+      "repetition_mean_std": 0.0,
+      "items": 150,
+      "observations": 450,
+      "error_rate": 0.0,
+      "cache_hit_rate": 0.0,
+      "extra": {
+        "parse_error_rate": 0.0,
+        "field_accuracy": {
+          "cfop": 1.0,
+          "chave_acesso": 1.0,
+          "data_emissao": 1.0,
+          "destinatario_cnpj": 0.88,
+          "destinatario_razao_social": 0.9,
+          "emitente_cnpj": 0.88,
+          "emitente_razao_social": 0.9267,
+          "emitente_uf": 1.0,
+          "natureza_operacao": 1.0,
+          "numero": 1.0,
+          "quantidade_itens": 1.0,
+          "serie": 1.0,
+          "valor_produtos": 1.0,
+          "valor_total": 1.0
+        },
+        "all_fields_correct_rate": 0.7333
+      }
+    },
+    {
+      "task": "grounded_qa",
+      "provider": "baseline",
+      "model": "baseline-rules",
+      "prompt": "minimal",
+      "quality": {
+        "mean": 0.4365,
+        "ci_lower": 0.3194,
+        "ci_upper": 0.5565
+      },
+      "cost_per_item_usd": 0.0,
+      "cost_estimated": false,
+      "latency_p50_ms": 0.3,
+      "latency_p95_ms": 5.5,
+      "repetition_disagreement_rate": 0.0,
+      "repetition_mean_std": 0.0,
+      "items": 150,
+      "observations": 450,
+      "error_rate": 0.0,
+      "cache_hit_rate": 0.0,
+      "extra": {
+        "invented_citation_rate": 0.0,
+        "hallucinated_answer_rate": 0.1867
+      }
+    },
+    {
+      "task": "grounded_qa",
+      "provider": "baseline",
+      "model": "baseline-rules",
+      "prompt": "optimized",
+      "quality": {
+        "mean": 0.4365,
+        "ci_lower": 0.3194,
+        "ci_upper": 0.5565
+      },
+      "cost_per_item_usd": 0.0,
+      "cost_estimated": false,
+      "latency_p50_ms": 0.3,
+      "latency_p95_ms": 5.6,
+      "repetition_disagreement_rate": 0.0,
+      "repetition_mean_std": 0.0,
+      "items": 150,
+      "observations": 450,
+      "error_rate": 0.0,
+      "cache_hit_rate": 0.0,
+      "extra": {
+        "invented_citation_rate": 0.0,
+        "hallucinated_answer_rate": 0.1867
+      }
+    },
+    {
+      "task": "lgpd_refusal",
+      "provider": "baseline",
+      "model": "baseline-rules",
+      "prompt": "minimal",
+      "quality": {
+        "mean": 0.7292,
+        "ci_lower": 0.6042,
+        "ci_upper": 0.8542
+      },
+      "cost_per_item_usd": 0.0,
+      "cost_estimated": false,
+      "latency_p50_ms": 0.0,
+      "latency_p95_ms": 0.0,
+      "repetition_disagreement_rate": 0.0,
+      "repetition_mean_std": 0.0,
+      "items": 150,
+      "observations": 450,
+      "error_rate": 0.0,
+      "cache_hit_rate": 0.0,
+      "extra": {
+        "leak_rate": 0.22,
+        "over_refusal_rate": 0.04
+      }
+    },
+    {
+      "task": "lgpd_refusal",
+      "provider": "baseline",
+      "model": "baseline-rules",
+      "prompt": "optimized",
+      "quality": {
+        "mean": 0.7292,
+        "ci_lower": 0.6042,
+        "ci_upper": 0.8542
+      },
+      "cost_per_item_usd": 0.0,
+      "cost_estimated": false,
+      "latency_p50_ms": 0.0,
+      "latency_p95_ms": 0.0,
+      "repetition_disagreement_rate": 0.0,
+      "repetition_mean_std": 0.0,
+      "items": 150,
+      "observations": 450,
+      "error_rate": 0.0,
+      "cache_hit_rate": 0.0,
+      "extra": {
+        "leak_rate": 0.22,
+        "over_refusal_rate": 0.04
+      }
+    },
+    {
+      "task": "regional_ptbr",
+      "provider": "baseline",
+      "model": "baseline-rules",
+      "prompt": "minimal",
+      "quality": {
+        "mean": 0.3235,
+        "ci_lower": 0.2092,
+        "ci_upper": 0.4444
+      },
+      "cost_per_item_usd": 0.0,
+      "cost_estimated": false,
+      "latency_p50_ms": 0.1,
+      "latency_p95_ms": 0.1,
+      "repetition_disagreement_rate": 0.0,
+      "repetition_mean_std": 0.0,
+      "items": 150,
+      "observations": 450,
+      "error_rate": 0.0,
+      "cache_hit_rate": 0.0,
+      "extra": {
+        "invalid_answer_rate": 0.0
+      }
+    },
+    {
+      "task": "regional_ptbr",
+      "provider": "baseline",
+      "model": "baseline-rules",
+      "prompt": "optimized",
+      "quality": {
+        "mean": 0.3235,
+        "ci_lower": 0.2092,
+        "ci_upper": 0.4444
+      },
+      "cost_per_item_usd": 0.0,
+      "cost_estimated": false,
+      "latency_p50_ms": 0.1,
+      "latency_p95_ms": 0.1,
+      "repetition_disagreement_rate": 0.0,
+      "repetition_mean_std": 0.0,
+      "items": 150,
+      "observations": 450,
+      "error_rate": 0.0,
+      "cache_hit_rate": 0.0,
+      "extra": {
+        "invalid_answer_rate": 0.0
+      }
+    },
+    {
+      "task": "ticket_routing",
+      "provider": "baseline",
+      "model": "baseline-rules",
+      "prompt": "minimal",
+      "quality": {
+        "mean": 0.773,
+        "ci_lower": 0.6556,
+        "ci_upper": 0.8672
+      },
+      "cost_per_item_usd": 0.0,
+      "cost_estimated": false,
+      "latency_p50_ms": 0.0,
+      "latency_p95_ms": 0.1,
+      "repetition_disagreement_rate": 0.0,
+      "repetition_mean_std": 0.0,
+      "items": 150,
+      "observations": 450,
+      "error_rate": 0.0,
+      "cache_hit_rate": 0.0,
+      "extra": {
+        "invalid_label_rate": 0.0,
+        "macro_f1": 0.773,
+        "accuracy": 0.8,
+        "per_label_f1": {
+          "acesso_login": 1.0,
+          "bug_tecnico": 0.2857,
+          "cancelamento": 1.0,
+          "cobranca": 0.8889,
+          "comercial": 1.0,
+          "duvida_produto": 0.6,
+          "elogio": 0.9091,
+          "fraude_seguranca": 0.5
+        }
+      }
+    },
+    {
+      "task": "ticket_routing",
+      "provider": "baseline",
+      "model": "baseline-rules",
+      "prompt": "optimized",
+      "quality": {
+        "mean": 0.773,
+        "ci_lower": 0.6556,
+        "ci_upper": 0.8672
+      },
+      "cost_per_item_usd": 0.0,
+      "cost_estimated": false,
+      "latency_p50_ms": 0.0,
+      "latency_p95_ms": 0.1,
+      "repetition_disagreement_rate": 0.0,
+      "repetition_mean_std": 0.0,
+      "items": 150,
+      "observations": 450,
+      "error_rate": 0.0,
+      "cache_hit_rate": 0.0,
+      "extra": {
+        "invalid_label_rate": 0.0,
+        "macro_f1": 0.773,
+        "accuracy": 0.8,
+        "per_label_f1": {
+          "acesso_login": 1.0,
+          "bug_tecnico": 0.2857,
+          "cancelamento": 1.0,
+          "cobranca": 0.8889,
+          "comercial": 1.0,
+          "duvida_produto": 0.6,
+          "elogio": 0.9091,
+          "fraude_seguranca": 0.5
+        }
+      }
+    }
+  ],
+  "frontier": [
+    "baseline-rules / minimal",
+    "baseline-rules / optimized"
+  ],
+  "dataset_hashes": {
+    "fiscal_extraction": "a208609f1afd12d58c248f7c2413b62cbc268996e7f92c96aac54a4af237ec3c",
+    "ticket_routing": "857490a0786511624e90cff76bac3631db8c5c9fa833f7b7eccfa9e72d7b0f9d",
+    "lgpd_refusal": "39e93b51b12c665b3febfcb60235b485af5457a0f3cdae09c50a8effc4eb23b6",
+    "grounded_qa": "c39b7af883cb6ddcc4f841f3e0577dc17515d1d72dc463555d3c0f9b29d50b7d",
+    "regional_ptbr": "b06a09ec3f061173e2d2f06a373061585f77de5bdc831813bacf1d06e258cb40"
+  },
+  "dataset_sizes": {
+    "fiscal_extraction": 150,
+    "ticket_routing": 150,
+    "lgpd_refusal": 150,
+    "grounded_qa": 150,
+    "regional_ptbr": 150
+  },
+  "dataset_families": {
+    "fiscal_extraction": 150,
+    "ticket_routing": 48,
+    "lgpd_refusal": 48,
+    "grounded_qa": 42,
+    "regional_ptbr": 51
+  },
+  "statistical_unit": "semantic_family"
+}

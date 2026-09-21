@@ -1,0 +1,1 @@
+{"id": "ticket-001", "input": {"ticket": "Bom dia, fui cobrado duas vezes no cartão esse mês, dia 03 e dia 05, mesmo valor de R$ 189,90. Preciso do estorno de uma delas."}, "expected": {"category": "cobranca"}, "tags": ["duplicidade"]}

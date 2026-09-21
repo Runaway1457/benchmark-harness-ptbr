@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="820" viewBox="0 0 1600 820" role="img" aria-labelledby="title desc">
+  <title id="title">Benchmark e Harness de Avaliação PT-BR — architecture</title>
+  <desc id="desc">Flow from versioned PT-BR datasets and prompts through provider adapters, resilient execution, deterministic scoring, statistical aggregation and static reports.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#07090e"/><stop offset="1" stop-color="#0b1018"/></linearGradient>
+    <linearGradient id="cyan" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#66fff5"/><stop offset="1" stop-color="#36e4da"/></linearGradient>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0l10 5-10 5z" fill="#536276"/></marker>
+    <filter id="shadow"><feDropShadow dx="0" dy="16" stdDeviation="18" flood-color="#000" flood-opacity=".38"/></filter>
+  </defs>
+  <rect width="1600" height="820" rx="28" fill="url(#bg)"/>
+  <text x="80" y="76" fill="#36e4da" font-family="monospace" font-size="15" font-weight="700" letter-spacing="4">SYSTEM ARCHITECTURE</text>
+  <text x="80" y="126" fill="#f5f8fb" font-family="Arial" font-size="38" font-weight="700">From dataset commit to defensible decision</text>
+  <text x="80" y="160" fill="#8795a8" font-family="Arial" font-size="18">Every result remains traceable to the input, prompt, model, scorer and dataset hash.</text>
+  <g transform="translate(80 220)" filter="url(#shadow)">
+    <rect width="300" height="390" rx="20" fill="#0e141e" stroke="#263344"/>
+    <text x="26" y="42" fill="#36e4da" font-family="monospace" font-size="13" font-weight="700">01 / BENCHMARK CONTRACT</text>
+    <g transform="translate(26 72)">
+      <rect width="248" height="72" rx="12" fill="#090d14" stroke="#223044"/><text x="18" y="30" fill="#f5f8fb" font-family="Arial" font-size="17" font-weight="700">Versioned datasets</text><text x="18" y="52" fill="#718094" font-family="Arial" font-size="13">JSONL · public / holdout</text>
+      <g transform="translate(0 88)"><rect width="248" height="72" rx="12" fill="#090d14" stroke="#223044"/><text x="18" y="30" fill="#f5f8fb" font-family="Arial" font-size="17" font-weight="700">Prompt variants</text><text x="18" y="52" fill="#718094" font-family="Arial" font-size="13">minimal · optimized · hash</text></g>
+      <g transform="translate(0 176)"><rect width="248" height="72" rx="12" fill="#090d14" stroke="#223044"/><text x="18" y="30" fill="#f5f8fb" font-family="Arial" font-size="17" font-weight="700">Task definition</text><text x="18" y="52" fill="#718094" font-family="Arial" font-size="13">build · parse · score · validate</text></g>
+    </g>
+  </g>
+  <path d="M396 414h76" stroke="#536276" stroke-width="2" marker-end="url(#arrow)"/>
+  <g transform="translate(488 220)" filter="url(#shadow)">
+    <rect width="300" height="390" rx="20" fill="#0e141e" stroke="#263344"/>
+    <text x="26" y="42" fill="#9b8cff" font-family="monospace" font-size="13" font-weight="700">02 / EXECUTION PLANE</text>
+    <g transform="translate(26 72)">
+      <rect width="248" height="72" rx="12" fill="#090d14" stroke="#223044"/><text x="18" y="30" fill="#f5f8fb" font-family="Arial" font-size="17" font-weight="700">Provider port</text><text x="18" y="52" fill="#718094" font-family="Arial" font-size="13">OpenAI · Anthropic · baseline</text>
+      <g transform="translate(0 88)"><rect width="248" height="72" rx="12" fill="#090d14" stroke="#223044"/><text x="18" y="30" fill="#f5f8fb" font-family="Arial" font-size="17" font-weight="700">Resilient runner</text><text x="18" y="52" fill="#718094" font-family="Arial" font-size="13">retry · jitter · concurrency</text></g>
+      <g transform="translate(0 176)"><rect width="248" height="72" rx="12" fill="#090d14" stroke="#223044"/><text x="18" y="30" fill="#f5f8fb" font-family="Arial" font-size="17" font-weight="700">Content cache</text><text x="18" y="52" fill="#718094" font-family="Arial" font-size="13">model × prompt × seed</text></g>
+    </g>
+  </g>
+  <path d="M804 414h76" stroke="#536276" stroke-width="2" marker-end="url(#arrow)"/>
+  <g transform="translate(896 220)" filter="url(#shadow)">
+    <rect width="300" height="390" rx="20" fill="#0e141e" stroke="#263344"/>
+    <text x="26" y="42" fill="#ffb86b" font-family="monospace" font-size="13" font-weight="700">03 / MEASUREMENT</text>
+    <g transform="translate(26 72)">
+      <rect width="248" height="72" rx="12" fill="#090d14" stroke="#223044"/><text x="18" y="30" fill="#f5f8fb" font-family="Arial" font-size="17" font-weight="700">Deterministic scoring</text><text x="18" y="52" fill="#718094" font-family="Arial" font-size="13">task-specific failure modes</text>
+      <g transform="translate(0 88)"><rect width="248" height="72" rx="12" fill="#090d14" stroke="#223044"/><text x="18" y="30" fill="#f5f8fb" font-family="Arial" font-size="17" font-weight="700">Clustered bootstrap</text><text x="18" y="52" fill="#718094" font-family="Arial" font-size="13">95% CI · semantic families</text></g>
+      <g transform="translate(0 176)"><rect width="248" height="72" rx="12" fill="#090d14" stroke="#223044"/><text x="18" y="30" fill="#f5f8fb" font-family="Arial" font-size="17" font-weight="700">Decision metrics</text><text x="18" y="52" fill="#718094" font-family="Arial" font-size="13">quality · cost · p50 / p95</text></g>
+    </g>
+  </g>
+  <path d="M1212 414h76" stroke="#536276" stroke-width="2" marker-end="url(#arrow)"/>
+  <g transform="translate(1304 220)" filter="url(#shadow)">
+    <rect width="216" height="390" rx="20" fill="#0e141e" stroke="#263344"/>
+    <text x="24" y="42" fill="#c5f46b" font-family="monospace" font-size="13" font-weight="700">04 / EVIDENCE</text>
+    <g transform="translate(24 72)">
+      <rect width="168" height="72" rx="12" fill="#090d14" stroke="#223044"/><text x="16" y="30" fill="#f5f8fb" font-family="Arial" font-size="16" font-weight="700">Run artifacts</text><text x="16" y="52" fill="#718094" font-family="Arial" font-size="12">raw observations</text>
+      <g transform="translate(0 88)"><rect width="168" height="72" rx="12" fill="#090d14" stroke="#223044"/><text x="16" y="30" fill="#f5f8fb" font-family="Arial" font-size="16" font-weight="700">Static report</text><text x="16" y="52" fill="#718094" font-family="Arial" font-size="12">sortable · no backend</text></g>
+      <g transform="translate(0 176)"><rect width="168" height="72" rx="12" fill="#090d14" stroke="#223044"/><text x="16" y="30" fill="#f5f8fb" font-family="Arial" font-size="16" font-weight="700">Pareto frontier</text><text x="16" y="52" fill="#718094" font-family="Arial" font-size="12">decision, not vanity</text></g>
+    </g>
+  </g>
+  <g transform="translate(80 660)">
+    <rect width="1440" height="92" rx="16" fill="#090d14" stroke="#263344"/>
+    <text x="28" y="36" fill="#36e4da" font-family="monospace" font-size="13" font-weight="700">REPRODUCIBILITY ENVELOPE</text>
+    <text x="28" y="65" fill="#8795a8" font-family="Arial" font-size="15">run id · exact model name · pricing snapshot · dataset SHA-256 · prompt hash · fixed bootstrap seed · byte-stable report</text>
+  </g>
+</svg>

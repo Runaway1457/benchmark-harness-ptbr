@@ -1,0 +1,51 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Install locked dependencies
+        run: uv sync --frozen --extra dev --python ${{ matrix.python-version }}
+      - name: Verify generated datasets are reproducible
+        run: |
+          uv run python scripts/build_surface_variants.py
+          git diff --exit-code -- tasks/
+      - name: Lint
+        run: |
+          uv run ruff format --check ptbr_benchmark tests
+          uv run ruff check ptbr_benchmark tests
+      - name: Types
+        run: uv run mypy
+      - name: Tests
+        run: uv run pytest
+      - name: Baseline end-to-end pipeline
+        run: |
+          export PTBR_BENCHMARK_RESULTS_DIR="${RUNNER_TEMP}/ptbr-benchmark-results"
+          export PTBR_BENCHMARK_DOCS_DIR="${RUNNER_TEMP}/ptbr-benchmark-docs"
+          export PTBR_BENCHMARK_SITE_DIR="${RUNNER_TEMP}/ptbr-benchmark-site"
+          export PTBR_BENCHMARK_CACHE_PATH="${RUNNER_TEMP}/ptbr-benchmark-cache.sqlite"
+          uv run ptbr-benchmark validate
+          uv run ptbr-benchmark run --provider baseline --prompt minimal --repetitions 1 --limit 20
+          uv run ptbr-benchmark run --provider baseline --prompt optimized --repetitions 1 --limit 20
+          uv run ptbr-benchmark report
+      - name: Upload generated site
+        if: matrix.python-version == '3.12'
+        uses: actions/upload-artifact@v4
+        with:
+          name: site
+          path: ${{ runner.temp }}/ptbr-benchmark-site/

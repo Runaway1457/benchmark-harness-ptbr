@@ -6,8 +6,8 @@
 
 <div align="center">
   <br>
-  <a href=".github/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/badge/CI-176%20tests-36e4da?style=flat-square"></a>
-  <a href="tests/"><img alt="coverage" src="https://img.shields.io/badge/branch%20coverage-98.7%25-36e4da?style=flat-square"></a>
+  <a href=".github/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/badge/CI-177%20tests-36e4da?style=flat-square"></a>
+  <a href="tests/"><img alt="coverage" src="https://img.shields.io/badge/branch%20coverage-98.8%25-36e4da?style=flat-square"></a>
   <a href="tasks/"><img alt="dataset" src="https://img.shields.io/badge/public%20items-750-8b7bff?style=flat-square"></a>
   <a href="docs/methodology.md"><img alt="statistics" src="https://img.shields.io/badge/statistics-95%25%20clustered%20bootstrap-8b7bff?style=flat-square"></a>
   <a href="LICENSE"><img alt="license" src="https://img.shields.io/badge/license-Apache--2.0-f4f7fb?style=flat-square"></a>
@@ -79,7 +79,7 @@ TaskDefinition → CompletionRequest → Provider → Completion → determinist
         └── dataset + prompt hashes        └── token use + latency + attempts
                                                │
                                                ▼
-                                observations.jsonl + manifest.json
+                           observations.jsonl[.gz] + manifest.json
                                                │
                                    clustered statistical aggregation
                                                │
@@ -179,7 +179,7 @@ The gate runs:
 - strict MyPy;
 - Bandit static security analysis;
 - `pip-audit` against a frozen export of runtime dependencies;
-- 176 tests with branch-aware coverage (current snapshot: 98.7%);
+- 177 tests with branch-aware coverage (current snapshot: 98.8%);
 - architecture tests against dead wiring and forbidden dependency directions;
 - deterministic report tests that compare output hashes;
 - provider fault tests for timeout, rate limit, truncation and malformed JSON.

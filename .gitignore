@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+dist/
+build/
+*.egg-info/
+.env
+.ptbr-benchmark-cache.sqlite
+tasks/*/holdout.jsonl
+!tasks/*/holdout.example.jsonl

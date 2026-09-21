@@ -1,0 +1,63 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ptbr-benchmark"
+version = "0.2.0"
+description = "Reproducible benchmark and evaluation harness for Brazilian Portuguese corporate LLM tasks"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "Apache-2.0" }
+dependencies = [
+  "httpx>=0.28,<1",
+  "pydantic>=2.11,<3",
+  "pydantic-settings>=2.10,<3",
+  "structlog>=25.4,<26",
+]
+
+[project.optional-dependencies]
+dev = [
+  "bandit>=1.8,<2",
+  "mypy>=1.17,<2",
+  "pip-audit>=2.9,<3",
+  "pytest>=8.4,<9",
+  "pytest-cov>=6.2,<7",
+  "ruff>=0.12,<1",
+]
+
+[project.scripts]
+ptbr-benchmark = "ptbr_benchmark.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["ptbr_benchmark"]
+
+[tool.pytest.ini_options]
+addopts = "--strict-markers --strict-config --cov=ptbr_benchmark --cov-branch --cov-report=term-missing --cov-fail-under=85"
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+src = ["ptbr_benchmark", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "RUF", "PL"]
+ignore = ["PLR0913", "PLR2004"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["ptbr_benchmark", "tests"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["PLR0913", "PLR2004", "PLC1901", "RUF012"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+packages = ["ptbr_benchmark"]
+warn_unreachable = true
+
+[tool.bandit]
+exclude_dirs = ["tests"]
+# B311: random é usado para bootstrap, jitter de retry e dado sintético, nunca para segurança.
+skips = ["B101", "B311"]

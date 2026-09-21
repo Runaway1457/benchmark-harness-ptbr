@@ -1,0 +1,29 @@
+services:
+  benchmark:
+    build:
+      context: ..
+      dockerfile: deployment/Dockerfile
+    env_file:
+      - ../.env
+    volumes:
+      - benchmark-data:/data
+    command: ["run", "--provider", "baseline", "--prompt", "optimized"]
+
+  report:
+    build:
+      context: ..
+      dockerfile: deployment/Dockerfile
+    volumes:
+      - benchmark-data:/data
+    command: ["report"]
+
+  site:
+    image: nginx:1.27-alpine
+    volumes:
+      - benchmark-data:/data:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      - "8080:80"
+
+volumes:
+  benchmark-data:

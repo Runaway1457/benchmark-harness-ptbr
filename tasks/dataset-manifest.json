@@ -1,0 +1,31 @@
+{
+  "method": "controlled_surface_variants_v1",
+  "statistical_unit": "semantic_family",
+  "tasks": {
+    "ticket_routing": {
+      "items": 150,
+      "semantic_families": 48,
+      "surface_variants": 102
+    },
+    "lgpd_refusal": {
+      "items": 150,
+      "semantic_families": 48,
+      "surface_variants": 102
+    },
+    "grounded_qa": {
+      "items": 150,
+      "semantic_families": 42,
+      "surface_variants": 108
+    },
+    "regional_ptbr": {
+      "items": 150,
+      "semantic_families": 51,
+      "surface_variants": 99
+    },
+    "fiscal_extraction": {
+      "items": 150,
+      "semantic_families": 150,
+      "surface_variants": 0
+    }
+  }
+}

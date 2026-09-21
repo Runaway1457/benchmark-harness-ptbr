@@ -1,0 +1,26 @@
+name: security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "0 6 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync --frozen --extra dev
+      - name: Bandit
+        run: uv run bandit -q -r ptbr_benchmark -c pyproject.toml
+      - name: Auditoria de dependências
+        run: |
+          uv export --frozen --no-dev --no-emit-project --format requirements.txt \
+            --output-file /tmp/ptbr-benchmark-requirements.txt
+          uv run pip-audit --strict --requirement /tmp/ptbr-benchmark-requirements.txt
