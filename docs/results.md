@@ -1,6 +1,6 @@
 # Resultados
 
-Harness `ptbr-benchmark 0.2.0`. Preços de referência em 2026-09-15. Rodadas concluídas até 2026-09-21 17:05 UTC.
+Harness `ptbr-benchmark 0.2.1`. Preços de referência em 2026-09-15. Rodadas concluídas até 2026-09-21 17:05 UTC.
 
 Toda métrica principal vem com intervalo de confiança de 95% por bootstrap sobre famílias semânticas. Diferenças de prompt usam bootstrap pareado do delta nas mesmas famílias. Custo marcado com `~` é estimado a partir de contagem de caracteres, porque o provedor não devolveu uso de tokens.
 
@@ -119,13 +119,13 @@ Interpretação de expressão regional em múltipla escolha.
 
 Mesma tarefa, mesmo modelo, prompts diferentes. O IC 95% é calculado sobre o delta pareado por família semântica; `significativo` quando esse intervalo exclui zero.
 
-| Tarefa | Modelo | Prompt A | Prompt B | Qualidade A | Qualidade B | Delta | IC 95% do delta | Significativo |
-|---|---|---|---|---:|---:|---:|---:|:---:|
-| fiscal_extraction | baseline-rules | minimal | optimized | 96.6% | 96.6% | +0.0 pp | [+0.0, +0.0] pp | não |
-| grounded_qa | baseline-rules | minimal | optimized | 43.7% | 43.7% | +0.0 pp | [+0.0, +0.0] pp | não |
-| lgpd_refusal | baseline-rules | minimal | optimized | 72.9% | 72.9% | +0.0 pp | [+0.0, +0.0] pp | não |
-| regional_ptbr | baseline-rules | minimal | optimized | 32.4% | 32.4% | +0.0 pp | [+0.0, +0.0] pp | não |
-| ticket_routing | baseline-rules | minimal | optimized | 77.3% | 77.3% | +0.0 pp | [+0.0, +0.0] pp | não |
+| Tarefa | Modelo | Prompt A | Prompt B | Qualidade A | Qualidade B | Delta | IC 95% do delta | Significativo | Efeito injetado |
+|---|---|---|---|---:|---:|---:|---:|:---:|---:|
+| fiscal_extraction | baseline-rules | minimal | optimized | 96.6% | 96.6% | +0.0 pp | [+0.0, +0.0] pp | não | n/d |
+| grounded_qa | baseline-rules | minimal | optimized | 43.7% | 43.7% | +0.0 pp | [+0.0, +0.0] pp | não | n/d |
+| lgpd_refusal | baseline-rules | minimal | optimized | 72.9% | 72.9% | +0.0 pp | [+0.0, +0.0] pp | não | n/d |
+| regional_ptbr | baseline-rules | minimal | optimized | 32.4% | 32.4% | +0.0 pp | [+0.0, +0.0] pp | não | n/d |
+| ticket_routing | baseline-rules | minimal | optimized | 77.3% | 77.3% | +0.0 pp | [+0.0, +0.0] pp | não | n/d |
 
 ## Validação de juiz
 

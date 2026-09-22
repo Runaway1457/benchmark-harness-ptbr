@@ -14,6 +14,7 @@ from ptbr_benchmark.providers.baseline import BASELINE_MODEL, BaselineProvider
 from ptbr_benchmark.providers.cascade import CascadeProvider
 from ptbr_benchmark.providers.http import AnthropicProvider, OpenAIProvider
 from ptbr_benchmark.providers.pricing import ModelPrice, PricingTable, load_pricing
+from ptbr_benchmark.providers.simulation import SimulationProvider, injected_prompt_effect
 from ptbr_benchmark.tasks.base import TaskDefinition
 from tests.conftest import make_completion
 
@@ -64,6 +65,16 @@ class TestBase:
         assert estimate_tokens("") == 1
         assert estimate_tokens("a" * 40) == 10
 
+    def test_answer_key_never_enters_completion_request(
+        self, tasks: dict[str, TaskDefinition]
+    ) -> None:
+        task = tasks["ticket_routing"]
+        item = task.load_items()[0]
+        request = task.build_request(item, task.load_prompts()["minimal"], model="m", seed=1)
+        serialized = json.dumps(request.metadata, ensure_ascii=False)
+        assert "expected" not in request.metadata
+        assert str(item.expected["category"]) not in serialized
+
 
 class TestPricing:
     def test_cost_and_prefix_match(self) -> None:
@@ -110,6 +121,58 @@ class TestBaseline:
         request = CompletionRequest(model="m", system="s", user="u", metadata={"task": "nope"})
         with pytest.raises(ProviderError, match="sem tarefa"):
             provider.complete(request)
+
+
+class TestSimulation:
+    def test_injected_effect_reports_the_effective_capped_lift(self) -> None:
+        assert injected_prompt_effect("sim-economy-v1", "ticket_routing") == pytest.approx(0.035)
+        assert injected_prompt_effect("sim-frontier-v1", "fiscal_extraction") == pytest.approx(
+            0.025
+        )
+        assert injected_prompt_effect("unknown", "ticket_routing") is None
+
+    def test_is_deterministic_and_reads_gold_without_request_leak(
+        self, tasks: dict[str, TaskDefinition]
+    ) -> None:
+        task = tasks["ticket_routing"]
+        item = task.load_items()[0]
+        request = task.build_request(
+            item, task.load_prompts()["optimized"], model="sim-economy-v1", seed=42
+        )
+        provider = SimulationProvider(tasks)
+        first = provider.complete(request)
+        assert first == provider.complete(request)
+        assert task.parse(first.text) is not None
+        assert "expected" not in request.metadata
+
+    @pytest.mark.parametrize("provider_name", ["anthropic", "openai"])
+    def test_http_bodies_ignore_sensitive_metadata(self, provider_name: str) -> None:
+        seen: dict[str, object] = {}
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            seen["body"] = json.loads(request.content)
+            if provider_name == "anthropic":
+                return httpx.Response(200, json={"model": "m", "content": [], "usage": {}})
+            return httpx.Response(
+                200,
+                json={"model": "m", "choices": [{"message": {"content": "ok"}}], "usage": {}},
+            )
+
+        client = _client(httpx.MockTransport(handler))
+        provider = (
+            AnthropicProvider(api_key="k", client=client)
+            if provider_name == "anthropic"
+            else OpenAIProvider(api_key="k", client=client)
+        )
+        provider.complete(
+            CompletionRequest(
+                model="m",
+                system="s",
+                user="u",
+                metadata={"expected": {"secret": "GABARITO_NAO_PODE_SAIR"}},
+            )
+        )
+        assert "GABARITO_NAO_PODE_SAIR" not in json.dumps(seen["body"])
 
 
 class TestCascade:

@@ -138,7 +138,11 @@ def evaluate_publication(
     )
     real_runs = tuple(run for run in runs if is_real_provider(run.spec.provider))
     if not real_runs:
-        return PublicationDecision(status="calibration", checks=calibration_checks)
+        has_simulation = any(is_simulation_provider(run.spec.provider) for run in runs)
+        return PublicationDecision(
+            status="simulation" if has_simulation else "calibration",
+            checks=calibration_checks,
+        )
 
     real_summaries = tuple(
         summary for summary in summaries if is_real_provider(summary.key.provider)
@@ -271,6 +275,10 @@ def _models_are_explicit(model: str) -> bool:
 
 
 def is_real_provider(provider: str) -> bool:
-    if provider == "baseline":
+    if provider in {"baseline", "simulation"}:
         return False
     return not (provider.startswith("cascade[baseline:") and "->baseline:" in provider)
+
+
+def is_simulation_provider(provider: str) -> bool:
+    return provider == "simulation" or "simulation:" in provider

@@ -137,6 +137,20 @@ def test_report_without_runs(workspace: Path, capsys: pytest.CaptureFixture[str]
     assert "nenhuma rodada" in capsys.readouterr().err
 
 
+def test_demo_matrix_uses_physically_separate_directories(
+    workspace: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    assert main(["demo-matrix", "--repetitions", "1"]) == 0
+    assert not (workspace / "results").exists()
+    summary = json.loads((workspace / "site-demo" / "summary.json").read_text())
+    assert summary["publication_status"] == "simulation"
+    assert summary["real_models"] == []
+    assert summary["simulated_models"] == ["sim-economy-v1", "sim-frontier-v1"]
+    page = (workspace / "site-demo" / "index.html").read_text(encoding="utf-8")
+    assert "Simulação, não ranking" in page
+    assert "sim-frontier-v1 (simulado)" in page
+
+
 def test_datasets_generate_and_holdout(workspace: Path, capsys: pytest.CaptureFixture[str]) -> None:
     assert main(["datasets", "generate-fiscal", "--count", "8", "--seed", "3"]) == 0
     dataset = workspace / "tasks" / "fiscal_extraction" / "dataset.jsonl"

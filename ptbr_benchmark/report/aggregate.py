@@ -39,6 +39,7 @@ from ptbr_benchmark.domain.models import (
     Split,
     Usage,
 )
+from ptbr_benchmark.providers.simulation import injected_prompt_effect
 
 MAX_PUBLISHABLE_ERROR_RATE = 0.02
 
@@ -68,9 +69,17 @@ def write_run(result: RunResult, results_dir: Path) -> Path:
     (run_dir / "manifest.json").write_text(
         json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
-    with (run_dir / "observations.jsonl").open("w", encoding="utf-8") as handle:
+    compressed_path = run_dir / "observations.jsonl.gz"
+    with (
+        compressed_path.open("wb") as raw_handle,
+        gzip.GzipFile(fileobj=raw_handle, mode="wb", mtime=0) as gzip_handle,
+    ):
         for observation in result.observations:
-            handle.write(json.dumps(_observation_to_json(observation), ensure_ascii=False) + "\n")
+            line = json.dumps(_observation_to_json(observation), ensure_ascii=False) + "\n"
+            gzip_handle.write(line.encode("utf-8"))
+    uncompressed_path = run_dir / "observations.jsonl"
+    if uncompressed_path.exists():
+        uncompressed_path.unlink()
     return run_dir
 
 
@@ -189,7 +198,8 @@ class ConfigKey:
 
     @property
     def label(self) -> str:
-        return f"{self.model} / {self.prompt_name}"
+        marker = " (simulado)" if self.provider == "simulation" else ""
+        return f"{self.model}{marker} / {self.prompt_name}"
 
 
 @dataclass(frozen=True, slots=True)
@@ -430,6 +440,8 @@ class PromptSensitivity:
     quality_a: Interval
     quality_b: Interval
     paired_delta: Interval | None = None
+    provider: str = ""
+    injected_delta: float | None = None
 
     @property
     def delta(self) -> float:
@@ -446,11 +458,11 @@ class PromptSensitivity:
 
 def prompt_sensitivity(summaries: Iterable[ConfigSummary]) -> tuple[PromptSensitivity, ...]:
     """Para cada (tarefa, modelo) com dois ou mais prompts, compara o primeiro com cada outro."""
-    grouped: dict[tuple[str, str], list[ConfigSummary]] = defaultdict(list)
+    grouped: dict[tuple[str, str, str], list[ConfigSummary]] = defaultdict(list)
     for summary in summaries:
-        grouped[(summary.key.task, summary.key.model)].append(summary)
+        grouped[(summary.key.task, summary.key.provider, summary.key.model)].append(summary)
     comparisons: list[PromptSensitivity] = []
-    for (task, model), configs in sorted(grouped.items()):
+    for (task, provider, model), configs in sorted(grouped.items()):
         if len(configs) < 2:
             continue
         ordered = sorted(configs, key=lambda c: c.key.prompt_name)
@@ -464,6 +476,10 @@ def prompt_sensitivity(summaries: Iterable[ConfigSummary]) -> tuple[PromptSensit
                     prompt_b=other.key.prompt_name,
                     quality_a=base.quality,
                     quality_b=other.quality,
+                    provider=provider,
+                    injected_delta=(
+                        injected_prompt_effect(model, task) if provider == "simulation" else None
+                    ),
                 )
             )
     return tuple(comparisons)
@@ -482,7 +498,7 @@ def paired_prompt_sensitivity(
         ].append(observation)
 
     comparisons: list[PromptSensitivity] = []
-    for (task, _provider, model), by_prompt in sorted(grouped.items()):
+    for (task, provider, model), by_prompt in sorted(grouped.items()):
         if len(by_prompt) < 2:
             continue
         prompt_names = sorted(by_prompt)
@@ -517,6 +533,10 @@ def paired_prompt_sensitivity(
                     quality_a=quality_a,
                     quality_b=quality_b,
                     paired_delta=paired_delta,
+                    provider=provider,
+                    injected_delta=(
+                        injected_prompt_effect(model, task) if provider == "simulation" else None
+                    ),
                 )
             )
     return tuple(comparisons)
@@ -578,40 +598,41 @@ def overall_pareto(
     summaries: Iterable[ConfigSummary], *, required_tasks: frozenset[str] | None = None
 ) -> tuple[ParetoPoint, ...]:
     """Um ponto por (modelo, prompt), com qualidade média entre tarefas e custo somado."""
-    grouped: dict[tuple[str, str], list[ConfigSummary]] = defaultdict(list)
+    grouped: dict[tuple[str, str, str], list[ConfigSummary]] = defaultdict(list)
     for summary in summaries:
-        grouped[(summary.key.model, summary.key.prompt_name)].append(summary)
+        grouped[(summary.key.provider, summary.key.model, summary.key.prompt_name)].append(summary)
     return pareto_frontier(_points_from(_eligible_groups(grouped, required_tasks=required_tasks)))
 
 
 def all_points(
     summaries: Iterable[ConfigSummary], *, required_tasks: frozenset[str] | None = None
 ) -> tuple[ParetoPoint, ...]:
-    grouped: dict[tuple[str, str], list[ConfigSummary]] = defaultdict(list)
+    grouped: dict[tuple[str, str, str], list[ConfigSummary]] = defaultdict(list)
     for summary in summaries:
-        grouped[(summary.key.model, summary.key.prompt_name)].append(summary)
+        grouped[(summary.key.provider, summary.key.model, summary.key.prompt_name)].append(summary)
     return _points_from(_eligible_groups(grouped, required_tasks=required_tasks))
 
 
 def pareto_exclusions(
     summaries: Iterable[ConfigSummary], *, required_tasks: frozenset[str] | None = None
 ) -> dict[str, tuple[str, ...]]:
-    grouped: dict[tuple[str, str], list[ConfigSummary]] = defaultdict(list)
+    grouped: dict[tuple[str, str, str], list[ConfigSummary]] = defaultdict(list)
     for summary in summaries:
-        grouped[(summary.key.model, summary.key.prompt_name)].append(summary)
+        grouped[(summary.key.provider, summary.key.model, summary.key.prompt_name)].append(summary)
     exclusions: dict[str, tuple[str, ...]] = {}
-    for (model, prompt), configs in sorted(grouped.items()):
+    for (provider, model, prompt), configs in sorted(grouped.items()):
         reasons = _pareto_exclusion_reasons(configs, required_tasks=required_tasks)
         if reasons:
-            exclusions[f"{model} / {prompt}"] = reasons
+            marker = " (simulado)" if provider == "simulation" else ""
+            exclusions[f"{model}{marker} / {prompt}"] = reasons
     return exclusions
 
 
 def _eligible_groups(
-    grouped: dict[tuple[str, str], list[ConfigSummary]],
+    grouped: dict[tuple[str, str, str], list[ConfigSummary]],
     *,
     required_tasks: frozenset[str] | None,
-) -> dict[tuple[str, str], list[ConfigSummary]]:
+) -> dict[tuple[str, str, str], list[ConfigSummary]]:
     return {
         key: configs
         for key, configs in grouped.items()
@@ -633,15 +654,17 @@ def _pareto_exclusion_reasons(
     return tuple(reasons)
 
 
-def _points_from(grouped: dict[tuple[str, str], list[ConfigSummary]]) -> tuple[ParetoPoint, ...]:
+def _points_from(
+    grouped: dict[tuple[str, str, str], list[ConfigSummary]],
+) -> tuple[ParetoPoint, ...]:
     """Arredonda custo e latência antes de comparar, para que ruído de microssegundo
     não decida quem está na fronteira."""
     return tuple(
         ParetoPoint(
-            label=f"{model} / {prompt}",
+            label=f"{model}{' (simulado)' if provider == 'simulation' else ''} / {prompt}",
             quality=round(sum(c.quality.point for c in configs) / len(configs), 4),
             cost_per_item_usd=round(sum(c.cost_per_item_usd for c in configs) / len(configs), 6),
             latency_p95_ms=round(max(c.latency_p95_ms for c in configs)),
         )
-        for (model, prompt), configs in sorted(grouped.items())
+        for (provider, model, prompt), configs in sorted(grouped.items())
     )

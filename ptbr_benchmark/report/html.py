@@ -198,6 +198,7 @@ def _topbar() -> str:
 def _header(context: ReportContext) -> str:
     state = {
         "calibration": "Calibração do harness · matriz de modelos pendente",
+        "simulation": "Demonstração sintética · não representa modelos reais",
         "pre-publication": "Pré-publicação · gates ainda não atendidos",
         "published": "Benchmark publicado · gates aprovados",
     }[context.publication.status]
@@ -260,6 +261,12 @@ def _pareto_section(context: ReportContext) -> str:
             '<p class="calibration-banner"><strong>Controle, não ranking.</strong> '
             "A publicação atual contém somente o baseline determinístico para validar o pipeline. "
             "Nenhuma conclusão sobre fornecedores é apresentada sem rodadas reais.</p>"
+        )
+    elif context.publication.status == "simulation":
+        parts.append(
+            '<p class="calibration-banner"><strong>Simulação, não ranking.</strong> '
+            "Cada perfil sintético leva “(simulado)” no próprio rótulo. Nenhum fornecedor "
+            "real foi medido neste artefato.</p>"
         )
     elif context.publication.status == "pre-publication":
         parts.append(
@@ -472,13 +479,14 @@ def _sensitivity_section(context: ReportContext) -> str:
         _th("Delta", numeric=True),
         _th("IC 95% do delta", numeric=True),
         _th("Significativo"),
+        _th("Efeito injetado", numeric=True),
     ]
     rows: list[str] = []
     for c in context.sensitivity:
         rows.append(
             "<tr>"
             + _td(c.task)
-            + _td(c.model)
+            + _td(c.model + (" (simulado)" if c.provider == "simulation" else ""))
             + _td(c.prompt_a)
             + _td(c.prompt_b)
             + _td(f"{_pct(c.quality_a.point)} → {_pct(c.quality_b.point)}", numeric=True)
@@ -492,12 +500,30 @@ def _sensitivity_section(context: ReportContext) -> str:
                 numeric=True,
             )
             + _td("sim" if c.significant else "não")
+            + _td(
+                f"{c.injected_delta * 100:+.1f} pp" if c.injected_delta is not None else "n/d",
+                numeric=True,
+            )
             + "</tr>"
+        )
+    simulated = [c for c in context.sensitivity if c.injected_delta is not None]
+    power_note = ""
+    if simulated:
+        detected = sum(c.significant for c in simulated)
+        power_note = (
+            '<p class="calibration-banner"><strong>Controle positivo / análise de poder.</strong> '
+            "O simulador injeta até +3,5 pp na probabilidade de resposta correta; a tabela "
+            "mostra o valor efetivo após o teto do perfil. "
+            f"{detected}/{len(simulated)} efeitos foram detectados "
+            "com IC 95% excluindo zero. Os demais delimitam a sensibilidade do desenho atual.</p>"
         )
     return (
         '<section><div class="section-head"><div><p class="section-kicker">Prompt effect</p>'
         "<h2>Sensibilidade a prompt</h2></div>"
-        f'<p class="note">{_esc(_SENSITIVITY_NOTE)}</p></div>' + _table(header, rows) + "</section>"
+        f'<p class="note">{_esc(_SENSITIVITY_NOTE)}</p></div>'
+        + power_note
+        + _table(header, rows)
+        + "</section>"
     )
 
 

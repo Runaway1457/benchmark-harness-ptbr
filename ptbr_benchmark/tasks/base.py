@@ -104,7 +104,12 @@ class TaskDefinition(ABC):
             system=system,
             user=user,
             seed=seed,
-            metadata={"task": self.name, "item_id": item.id, "input": item.input},
+            metadata={
+                "task": self.name,
+                "item_id": item.id,
+                "input": item.input,
+                "prompt_name": prompt.name,
+            },
         )
 
     @abstractmethod

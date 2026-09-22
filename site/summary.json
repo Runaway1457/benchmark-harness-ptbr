@@ -1,5 +1,5 @@
 {
-  "harness_version": "0.2.0",
+  "harness_version": "0.2.1",
   "pricing_as_of": "2026-09-15",
   "latest_run_at": "2026-09-21 17:05 UTC",
   "publication_status": "calibration",
@@ -46,6 +46,7 @@
     ]
   },
   "real_models": [],
+  "simulated_models": [],
   "configurations": [
     {
       "task": "fiscal_extraction",

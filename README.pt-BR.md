@@ -75,6 +75,15 @@ uv run ptbr-benchmark run \
 uv run ptbr-benchmark report
 ```
 
+Para explorar o relatório completo sem chave de API, execute `make demo`. O controle
+positivo grava exclusivamente em `results-demo/`, `docs-demo/` e `site-demo/`; esses
+diretórios nunca são misturados com `results/`, `docs/` ou `site/`. Os perfis carregam
+`(simulado)` em cada linha, inclusive na fronteira de Pareto e em screenshots.
+
+O prompt `optimized` recebe um aumento sintético conhecido de **até +3,5 pp na probabilidade
+de resposta correta**. O relatório coloca o aumento efetivo após o teto do perfil ao lado do
+IC observado como análise de poder do desenho — não como descoberta sobre fornecedores.
+
 Antes da matriz paga, uma chamada de preflight valida autenticação, parâmetros e preço. O provider Anthropic usa a mesma interface. Respostas são cacheadas por provedor, modelo exato, prompt renderizado e repetição. Timeout, 429 e 5xx usam backoff exponencial com jitter; falhas terminais permanecem visíveis no relatório.
 
 ## Publicação é um estado calculado

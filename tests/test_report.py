@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import gzip
 import hashlib
 import json
 from dataclasses import replace
@@ -56,6 +55,8 @@ class TestPersistence:
         result = _run(observations, tasks=("ticket_routing",), model="cheap", prompt="minimal")
         run_dir = write_run(result, tmp_path)
         assert (run_dir / "manifest.json").exists()
+        assert (run_dir / "observations.jsonl.gz").exists()
+        assert not (run_dir / "observations.jsonl").exists()
         manifest = json.loads((run_dir / "manifest.json").read_text())
         assert manifest["observations"] == 2
         assert manifest["spec"]["split"] == "public"
@@ -72,18 +73,13 @@ class TestPersistence:
             model="cheap",
             prompt="minimal",
         )
-        run_dir = write_run(result, tmp_path)
-        source = run_dir / "observations.jsonl"
+        run_dir = write_run(result, tmp_path / "first")
         compressed = run_dir / "observations.jsonl.gz"
-        with (
-            source.open("rb") as source_handle,
-            compressed.open("wb") as target_handle,
-            gzip.GzipFile(fileobj=target_handle, mode="wb", mtime=0) as gzip_handle,
-        ):
-            gzip_handle.write(source_handle.read())
-        source.unlink()
+        assert compressed.read_bytes()[4:8] == b"\x00\x00\x00\x00"
+        second = write_run(result, tmp_path / "second") / "observations.jsonl.gz"
+        assert compressed.read_bytes() == second.read_bytes()
 
-        runs = read_runs(tmp_path)
+        runs = read_runs(tmp_path / "first")
         assert len(runs) == 1
         assert runs[0].observations == result.observations
 
@@ -504,6 +500,48 @@ class TestRenderers:
         )
         assert "Controle, não ranking" in render_html(context)
         assert "Estado: calibração do harness" in render_markdown(context)
+
+    def test_simulation_label_survives_mixed_real_report(self) -> None:
+        summary = _context().summaries[0]
+        simulated = replace(
+            summary,
+            key=replace(summary.key, provider="simulation", model="sim-frontier-v1"),
+        )
+        real = replace(summary, key=replace(summary.key, provider="anthropic", model="real-x"))
+        summaries = (real, simulated)
+        context = _context(
+            summaries=summaries,
+            points=all_points(summaries),
+            frontier=overall_pareto(summaries),
+            publication=PublicationDecision(status="published", checks=()),
+        )
+        assert "sim-frontier-v1 (simulado)" in render_markdown(context)
+        assert "sim-frontier-v1 (simulado)" in render_html(context)
+
+    def test_simulation_report_is_labeled_and_documents_power(self) -> None:
+        summary = _context().summaries[0]
+        simulated = replace(
+            summary,
+            key=replace(summary.key, provider="simulation", model="sim-economy-v1"),
+        )
+        sensitivity = (
+            replace(
+                _context().sensitivity[0],
+                provider="simulation",
+                model="sim-economy-v1",
+                injected_delta=0.035,
+            ),
+        )
+        context = _context(
+            summaries=(simulated,),
+            points=all_points((simulated,)),
+            frontier=overall_pareto((simulated,)),
+            sensitivity=sensitivity,
+            publication=PublicationDecision(status="simulation", checks=()),
+        )
+        assert "Estado: demonstração sintética" in render_markdown(context)
+        assert "análise de poder" in render_markdown(context)
+        assert "Simulação, não ranking" in render_html(context)
 
     def test_frontier_label_anchor_flips_on_right_side(self) -> None:
         far = ParetoPoint("caro / p", 0.9, 0.05, 100)

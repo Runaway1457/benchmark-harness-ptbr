@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.1
+
+- Added an explicitly synthetic positive-control matrix with physical output isolation.
+- Made simulation provenance part of every configuration and Pareto label.
+- Added injected-effect reporting for benchmark power analysis.
+- Kept answer keys outside `CompletionRequest` and added HTTP non-disclosure tests.
+- Made run artifacts deterministic gzip by default.
+
 ## 0.2.0
 
 Calibration release with a publication-grade measurement contract.

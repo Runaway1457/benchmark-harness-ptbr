@@ -17,7 +17,11 @@ from ptbr_benchmark.report.aggregate import (
     summarize,
 )
 from ptbr_benchmark.report.context import ReportContext, TaskInfo
-from ptbr_benchmark.report.gates import evaluate_publication, is_real_provider
+from ptbr_benchmark.report.gates import (
+    evaluate_publication,
+    is_real_provider,
+    is_simulation_provider,
+)
 from ptbr_benchmark.report.html import render_html
 from ptbr_benchmark.report.markdown import render_markdown
 from ptbr_benchmark.scoring.judge import JudgeValidation
@@ -116,6 +120,13 @@ def write_reports(
             if is_real_provider(summary.key.provider)
         }
     )
+    simulated_models = sorted(
+        {
+            summary.key.model
+            for summary in context.summaries
+            if is_simulation_provider(summary.key.provider)
+        }
+    )
     markdown_path.write_text(render_markdown(context), encoding="utf-8")
     html_path.write_text(render_html(context), encoding="utf-8")
     summary_path.write_text(
@@ -127,6 +138,7 @@ def write_reports(
                 "publication_status": context.publication.status,
                 "publication_gates": context.publication.to_json(),
                 "real_models": real_models,
+                "simulated_models": simulated_models,
                 "configurations": [s.to_json() for s in context.summaries],
                 "frontier": [p.label for p in context.frontier],
                 "pareto_exclusions": context.pareto_exclusions,

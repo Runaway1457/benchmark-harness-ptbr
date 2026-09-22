@@ -91,6 +91,15 @@ def _intro(context: ReportContext) -> str:
                 "",
             ]
         )
+    elif context.publication.status == "simulation":
+        lines.extend(
+            [
+                "> **Estado: demonstração sintética.** Este relatório é um controle positivo "
+                "gerado sem APIs. Toda configuração sintética leva `(simulado)` no próprio "
+                "rótulo; os números não representam modelos comerciais.",
+                "",
+            ]
+        )
     elif context.publication.status == "pre-publication":
         lines.extend(
             [
@@ -272,14 +281,15 @@ def _sensitivity(context: ReportContext) -> str:
             "Delta",
             "IC 95% do delta",
             "Significativo",
+            "Efeito injetado",
         ),
-        "|---|---|---|---|---:|---:|---:|---:|:---:|",
+        "|---|---|---|---|---:|---:|---:|---:|:---:|---:|",
     ]
     for c in context.sensitivity:
         lines.append(
             _row(
                 c.task,
-                c.model,
+                c.model + (" (simulado)" if c.provider == "simulation" else ""),
                 c.prompt_a,
                 c.prompt_b,
                 _pct(c.quality_a.point),
@@ -291,7 +301,24 @@ def _sensitivity(context: ReportContext) -> str:
                     else "n/d"
                 ),
                 "sim" if c.significant else "não",
+                f"{c.injected_delta * 100:+.1f} pp" if c.injected_delta is not None else "n/d",
             )
+        )
+    simulated = [c for c in context.sensitivity if c.injected_delta is not None]
+    if simulated:
+        detected = sum(c.significant for c in simulated)
+        lines.extend(
+            [
+                "",
+                "### Controle positivo e análise de poder",
+                "",
+                "O simulador injeta até **+3,5 pp na probabilidade de resposta correta** "
+                "do prompt `optimized`; a coluna mostra o valor efetivo após o teto do perfil. "
+                f"O desenho detectou "
+                f"{detected}/{len(simulated)} efeitos com IC 95% excluindo zero. Casos não "
+                "detectados estimam diretamente o limite de sensibilidade com o número atual "
+                "de famílias semânticas; não são evidência sobre modelos reais.",
+            ]
         )
     lines.append("")
     return "\n".join(lines)

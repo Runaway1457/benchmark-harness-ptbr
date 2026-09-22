@@ -28,6 +28,7 @@ from ptbr_benchmark.providers.baseline import BASELINE_MODEL, BaselineProvider
 from ptbr_benchmark.providers.cascade import CascadeProvider
 from ptbr_benchmark.providers.http import AnthropicProvider, OpenAIProvider
 from ptbr_benchmark.providers.pricing import load_pricing
+from ptbr_benchmark.providers.simulation import PROFILES, SimulationProvider
 from ptbr_benchmark.report.aggregate import write_run
 from ptbr_benchmark.report.build import build_context, write_reports
 from ptbr_benchmark.report.gates import is_real_provider
@@ -65,7 +66,11 @@ def build_provider(
         return AnthropicProvider(timeout_seconds=settings.request_timeout_seconds)
     if name == "openai":
         return OpenAIProvider(timeout_seconds=settings.request_timeout_seconds)
-    raise DomainError(f"provedor desconhecido: {name!r}. Use baseline, anthropic ou openai.")
+    if name == "simulation":
+        return SimulationProvider(tasks_by_name)
+    raise DomainError(
+        f"provedor desconhecido: {name!r}. Use baseline, simulation, anthropic ou openai."
+    )
 
 
 def _parse_tasks(value: str) -> tuple[str, ...]:
@@ -220,6 +225,40 @@ def cmd_report(args: argparse.Namespace, settings: Settings) -> int:
     return 0
 
 
+def cmd_demo_matrix(args: argparse.Namespace, settings: Settings) -> int:
+    """Gera controle positivo em diretórios fisicamente separados da matriz real."""
+    demo = settings.model_copy(
+        update={
+            "results_dir": settings.results_dir.with_name("results-demo"),
+            "docs_dir": settings.docs_dir.with_name("docs-demo"),
+            "site_dir": settings.site_dir.with_name("site-demo"),
+            "cache_path": settings.cache_path.with_name(".ptbr-benchmark-demo-cache.sqlite"),
+        }
+    )
+    configurations = [("baseline", BASELINE_MODEL)] + [
+        ("simulation", model) for model in sorted(PROFILES)
+    ]
+    for provider, model in configurations:
+        for prompt in ("minimal", "optimized"):
+            cmd_run(
+                argparse.Namespace(
+                    tasks="all",
+                    provider=provider,
+                    model=model,
+                    prompt=prompt,
+                    repetitions=args.repetitions,
+                    seed=args.seed,
+                    split="public",
+                    limit=None,
+                    no_cache=True,
+                    skip_preflight=True,
+                    cascade_to=None,
+                ),
+                demo,
+            )
+    return cmd_report(argparse.Namespace(seed=args.seed), demo)
+
+
 def cmd_generate_fiscal(args: argparse.Namespace, settings: Settings) -> int:
     rng = random.Random(args.seed)
     target = (
@@ -300,7 +339,11 @@ def build_parser() -> argparse.ArgumentParser:
     validate.set_defaults(func=cmd_validate)
 
     run = sub.add_parser("run", help="executa uma rodada")
-    run.add_argument("--provider", default="baseline", choices=("baseline", "anthropic", "openai"))
+    run.add_argument(
+        "--provider",
+        default="baseline",
+        choices=("baseline", "simulation", "anthropic", "openai"),
+    )
     run.add_argument("--model", default=BASELINE_MODEL)
     run.add_argument("--tasks", default="all")
     run.add_argument("--prompt", default="minimal")
@@ -321,6 +364,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="escala itens duvidosos para outro modelo",
     )
     run.set_defaults(func=cmd_run)
+
+    demo = sub.add_parser("demo-matrix", help="gera controle positivo em results-demo/")
+    demo.add_argument("--repetitions", type=int, default=3)
+    demo.add_argument("--seed", type=int, default=42)
+    demo.set_defaults(func=cmd_demo_matrix)
 
     report = sub.add_parser("report", help="agrega rodadas e gera relatório e site")
     report.add_argument("--seed", type=int, default=42, help="seed do bootstrap")

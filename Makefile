@@ -1,4 +1,4 @@
-.PHONY: install lint type security test check run site clean
+.PHONY: install lint type security test check run demo site clean
 
 UV ?= uv
 
@@ -30,6 +30,9 @@ run:
 	$(UV) run ptbr-benchmark run --provider baseline --prompt minimal --repetitions 3
 	$(UV) run ptbr-benchmark run --provider baseline --prompt optimized --repetitions 3
 	$(UV) run ptbr-benchmark report
+
+demo:
+	$(UV) run ptbr-benchmark demo-matrix --repetitions 3
 
 site:
 	$(UV) run ptbr-benchmark report

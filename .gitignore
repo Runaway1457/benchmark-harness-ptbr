@@ -11,5 +11,9 @@ build/
 *.egg-info/
 .env
 .ptbr-benchmark-cache.sqlite
+.ptbr-benchmark-demo-cache.sqlite
+results-demo/
+docs-demo/
+site-demo/
 tasks/*/holdout.jsonl
 !tasks/*/holdout.example.jsonl

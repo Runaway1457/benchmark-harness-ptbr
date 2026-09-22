@@ -153,6 +153,15 @@ uv run ptbr-benchmark run \
 uv run ptbr-benchmark report
 ```
 
+Run `make demo` to generate a complete positive-control matrix without API keys. Demo
+artifacts are physically isolated in `results-demo/`, `docs-demo/`, and `site-demo/`;
+they never share the real-results directories. Every synthetic configuration carries
+`(simulado)` in its row and Pareto label, so the disclosure survives screenshots.
+
+The optimized prompt receives a known synthetic lift of **up to +3.5 pp in correct-answer
+probability**. The report places the effective lift after profile capping beside the observed
+confidence interval as a design-power analysis, not as evidence about a vendor model.
+
 Before the paid matrix starts, the harness executes one uncached preflight request. Unsupported parameters, authentication failures and missing prices stop there instead of producing 2,250 invalid calls. Current OpenAI reasoning families receive `max_completion_tokens` without unsupported sampling parameters; Anthropic uses the same provider port.
 
 ## Repository anatomy
